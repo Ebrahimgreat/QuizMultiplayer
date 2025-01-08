@@ -2,8 +2,11 @@
 
 
 
+import {SupabaseClient} from "@supabase/supabase-js";
+
 const colors=['none','none','none','none']
 import{usequizStore} from "~/stores/quizStart";
+import {ca} from "cronstrue/dist/i18n/locales/ca";
 const quizStore=usequizStore();
 let questions=quizStore.questions;
 let options=quizStore.options;
@@ -33,7 +36,7 @@ function next()
 
 let correct=0;
 let score=0;
-function quizComplete()
+async function quizComplete()
 {
 
  for(let i=0; i<quizAnswers.length; i++)
@@ -48,6 +51,29 @@ function quizComplete()
 
 
   submitQuiz.value=true;
+
+  let supabase=useSupabaseClient();
+
+  let currentUser=useSupabaseUser();
+  try{
+    const{data:pointsInsert,error:insertError}=await supabase.from('points').insert({
+      'user_id':currentUser,
+      'pointsQuestionRatio':score
+    });
+    if(insertError)
+    {
+      console.log("Cannot be inserted");
+      return;
+    }
+
+  }
+  catch(error){
+    console.log(error);
+  }
+
+
+
+
 
 
 }
@@ -181,6 +207,11 @@ let submitQuiz=ref(false)
       <h2 class="text-center text-white"> Attempted:{{answers.length}}</h2>
       <h3 class="text-center text-white"> Correct:{{correct}} </h3>
       <h4 class="text-center text-white"> Score:{{score}}</h4>
+      <h5 class="text-center text-white">
+        <NuxtLink to="/home">
+        Back To Home
+      </NuxtLink>
+      </h5>
 
     </div>
   </div>

@@ -2,6 +2,7 @@
 
 
 import{useRoleStore} from "~/stores/role";
+import {useSupabaseUser} from "#imports";
 const roleStore=useRoleStore();
 let role=roleStore.role;
 
@@ -11,12 +12,31 @@ async function getUser()
   console.log(supabase.auth.getUser())
 
 }
-let Quiz=[
-  {
+let quizInformation=ref([])
+async function getAllQuiz()
+{
+  let supabase=useSupabaseClient();
+  const currentUser=useSupabaseUser();
+  try{
+    const{data:quizData,error:quizError}=await supabase.from('quiz').select('*').eq('users_id',currentUser.value);
+    if(quizError){
+      console.log('Unable to fetch');
+      return;
 
-    name:'avengers',category:'fun',status:'active'
+    }
+    quizInformation.value=quizData
+
+
   }
-]
+  catch (error)
+  {
+    console.log(error)
+  }
+
+
+
+}
+
 
 
 async function logout()
@@ -67,7 +87,13 @@ async function getCurrentUser() {
 }
 
 onMounted(()=>{
+  if(role=='player'){
   getProfileofUsers()
+    }
+   else{
+    getAllQuiz()
+  }
+
 })
 
 </script>
@@ -101,14 +127,17 @@ Status
      <th class="px-4 py-2 boredr gray-100 text-black">
        Delete
      </th>
+        <th class="px-4 py-2 boredr gray-100 text-black">
+          Deactivate
+        </th>
     </tr>
-   <tr v-for="item in Quiz" class="px-4 py-2 border gray-100 text-black">
+   <tr v-for="item in quizInformation" class="px-4 py-2 border gray-100 text-black">
      <td>
        {{item.name}}
 
      </td>
      <td>
-       {{item.category}}
+
      </td>
      <td>
        {{item.status}}
@@ -149,12 +178,12 @@ Status
       </tr>
 
     </table>
-    <div class="flex-col items-center justify-center">
-    <img src="/images/rabbit.png" class="w-auto h-1/2 object-contain">
-    </div>
+
   </div>
 
-
+  <div class="flex-col items-center justify-center">
+    <img src="/images/rabbit.png" class="w-1/4 object-contain">
+  </div>
 
 </template>
 

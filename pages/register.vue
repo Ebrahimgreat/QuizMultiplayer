@@ -7,6 +7,8 @@ let credentials=ref({
   email:'',
   password:''
 })
+let roleSelected=ref()
+let name=ref()
 
 
 
@@ -15,10 +17,22 @@ async function register()
 {
   const supabase=useSupabaseClient()
   try{
-    await  supabase.auth.signUp({
+    const{data:signUp,error:signUpError}=await  supabase.auth.signUp({
       email:credentials.value.email,
       password:credentials.value.password
     })
+    if(signUpError)
+    {
+      console.log("Error");
+      return;
+    }
+
+    let user=useSupabaseUser();
+    const{data,error}=await supabase.from('profiles').insert({
+      'user_id':user.value,
+
+    })
+
     navigateTo('/home');
   }
   catch (error)
@@ -36,6 +50,12 @@ async function register()
         Quiz Rabbit
       </h1>
       <div class="mb-4">
+
+        <label class="block text-white text-sm font-bold mb-2">
+          Name
+        </label>
+        <input v-model="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="email" placeholder="Ebrahim">
+
         <label class="block text-white text-sm font-bold mb-2">
           Email
         </label>
@@ -52,11 +72,11 @@ async function register()
         <label class=" text-white text-sm font-bold mr-3.5">
           Content Creater
         </label>
-        <input type="radio" name="role" value="Creater" class="mr-3.5">
+        <input type="radio" name="role" value="content Creater" class="mr-3.5" v-model="roleSelected">
         <label class=" text-white text-sm font-bold mr-3.5">
           Player
         </label>
-        <input type="radio" name="role" value="player">
+        <input type="radio" name="role" value="player" v-model="roleSelected">
 
 <br>
         <button @click="register" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="button">

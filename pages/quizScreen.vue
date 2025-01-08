@@ -82,7 +82,6 @@ onMounted(()=>{
 
 <div class="bg-blue-900 h-screen flex flex-col items-center justify-center">
 
-  {{questions}}
   <h1 class="text-center text-white text-5xl">
     Quiz Rabbit
   </h1>

@@ -8,7 +8,7 @@ let teacher={
   name:'Ebrahim'
 }
 
-const categories=['science','fun','sports','maths','politics','religious','History','animals']
+const categories=['science','fun','sports','math','politics','religious','History','animals']
 
 
  function takeQuiz(id)

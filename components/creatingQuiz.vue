@@ -78,9 +78,12 @@ function removeQuestion(index)
 let timed=ref(false)
 
 let selected=ref()
-function categorySelected(index)
+
+let category=ref('')
+function categorySelected(index,value)
 {
   selected.value=index;
+  category.value=value;
 
 
 }
@@ -93,7 +96,8 @@ async function createQuiz()
   let supabase=useSupabaseClient()
   try {
     const {data: quizData, error: quizError} = await supabase.from('quiz').insert({
-      'name': quizName.value
+      'name': quizName.value,
+      'quiz_category':selected.value+1
     }).select('id').single();
     if (quizError) {
       console.log("Error creating a quiz")
@@ -168,7 +172,7 @@ async function createQuiz()
    </h1>
   <div class="grid grid-cols-4 gap-4 ">
 
-   <button v-for="(item,index) in items" class="border p-4 text-center bg-grey-900"  v-bind:style="{backgroundColor:selected===index?'blue': 'white'}" @click="categorySelected(index)">
+   <button v-for="(item,index) in items" class="border p-4 text-center bg-grey-900"  v-bind:style="{backgroundColor:selected===index?'blue': 'white'}" @click="categorySelected(index,item)">
      {{item}}
    </button>
   </div>
