@@ -8,6 +8,8 @@ export default defineNuxtRouteMiddleware(async (to,from)=>{
 
     let roleStore=useRoleStore();
 
+    let profileData=ref([])
+
     console.log("middleware running")
 
     const user=useSupabaseUser();
@@ -23,10 +25,13 @@ export default defineNuxtRouteMiddleware(async (to,from)=>{
 
             if(profileError)
             {
-                console.log("Error");
+                console.log(profile.id);
             }
-            console.log(profile);
+
+
             await roleStore.setRole(profile?.role);
+            await roleStore.setId(profile.id);
+            await roleStore.setName(profile.name)
 
        }
        catch(error)

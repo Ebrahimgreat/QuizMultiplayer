@@ -4,7 +4,8 @@ export const usequizStore=defineStore('quiz', {
         quizName: '',
         questions: [{question: ''}],
         options: [{A: '', B: '', C: '', D: ''}],
-        answers:['']
+        answers:[''],
+        challengeId:''
 
     }),
     actions: {
@@ -28,8 +29,15 @@ export const usequizStore=defineStore('quiz', {
                 console.log(error);
             }
 
+        },
+        async setChallenge(challengeId)
+        {
+            this.challengeId=challengeId;
+
         }
 
 
+
     }
+
 })

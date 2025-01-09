@@ -165,7 +165,7 @@ Status
 
 
 
-    <table class="auto h-full w-full">
+    <table class="auto h-full w-full bg-blue-900">
       <tr>
         <th class="px-4 py-2">
           Name
@@ -173,7 +173,16 @@ Status
         </th>
         <th class="px-4 py-2">
 
-       Add Friend
+      Ranking
+        </th>
+
+        <th class="px-4 py-2">
+
+         Total Points
+        </th>
+        <th class="px-4 py-2">
+
+         Games Won
         </th>
 
 
@@ -181,7 +190,8 @@ Status
 
       </tr>
       <tr v-for="item in profiles" class="border">
-        <td class="px-4 py-2">{{item.name}}</td>
+        <td class="px-4 py-2 text-white
+">{{item.name}}</td>
         <td> <button @click="challengePlayer(item)">Send Request
         </button>
         </td>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 
-import {definePageMeta} from "#imports";
+import {definePageMeta, useSupabaseUser} from "#imports";
 import {ca} from "cronstrue/dist/i18n/locales/ca";
 
 definePageMeta({
@@ -94,10 +94,14 @@ async function createQuiz()
   console.log('creating your quiz');
 
   let supabase=useSupabaseClient()
+  let user=useSupabaseUser();
+  let currentUser=user.value?.id
   try {
     const {data: quizData, error: quizError} = await supabase.from('quiz').insert({
       'name': quizName.value,
-      'quiz_category':selected.value+1
+      'quiz_category':selected.value+1,
+      'users_id':currentUser
+
     }).select('id').single();
     if (quizError) {
       console.log("Error creating a quiz")
@@ -165,10 +169,11 @@ async function createQuiz()
 
 <div class="h-screen flex flex-col">
 
-  <p class="text-center text-white bg-black">Creating  a New Quiz</p>
+  <p class="text-center text-white bg-black">New Quiz</p>
   <div class="bg-amber-600 p-4 border-2">
     <input type="text" v-model="quizName" placeholder="Enter quiz name" class="w-full py-2 border border-indigo-500 rounded mr-5">
-   <h1 class="text-center text-white"> Choose a category
+   <input type="text" placeholder="Quiz Bio" class="w-full py-2 border border-indigo-500 rounded mt-4">
+    <h1 class="text-center text-white"> Choose a category
    </h1>
   <div class="grid grid-cols-4 gap-4 ">
 

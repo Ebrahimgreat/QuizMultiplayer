@@ -102,11 +102,11 @@ async function subscribeToLobby() {
 
     }
   }).subscribe();
-    console.log("Game Start value:",gameStart.value,"Next button",nextButton.value)
+  console.log("Game Start value:",gameStart.value,"Next button",nextButton.value)
 
-    if(gameStart.value && nextButton.value) {
-      console.log('Next is true')
-    }
+  if(gameStart.value && nextButton.value) {
+    console.log('Next is true')
+  }
 
   supabase.channel('ebrahimLobby').on('broadcast', { event: 'next' }, (eventPayload) => {
     const userId = eventPayload.payload.userId;
@@ -123,7 +123,7 @@ async function subscribeToLobby() {
 
   supabase.channel('ebrahimLobby').on('broadcast',{event:'submit'},(eventPayload)=>{
 
-   console.log("function executing")
+    console.log("function executing")
     const{userId,correct}=eventPayload.payload;
     if(!results.value.includes(userId)){
       results.value.push({userId,correct})
@@ -142,10 +142,10 @@ async function subscribeToLobby() {
 
         }
       });
-       winner.value={
-         playerName:player,
-         answerCorrect:correctAnswer
-       }
+      winner.value={
+        playerName:player,
+        answerCorrect:correctAnswer
+      }
 
 
 
@@ -162,69 +162,69 @@ async function subscribeToLobby() {
 }
 
 
- async function getQuizData() {
+async function getQuizData() {
   console.log('getting quiz data')
-   let supabase = useSupabaseClient();
-   const url = new URLSearchParams(window.location.search);
-   let quizId = url.get('id');
+  let supabase = useSupabaseClient();
+  const url = new URLSearchParams(window.location.search);
+  let quizId = url.get('id');
 
-   try {
-     const supabase = useSupabaseClient();
-     const {data: quizValue, error: quizError} = await supabase.from('quiz').select('name').eq('id', quizId).single();
+  try {
+    const supabase = useSupabaseClient();
+    const {data: quizValue, error: quizError} = await supabase.from('quiz').select('name').eq('id', quizId).single();
 
-     if (quizError) {
-       console.log(quizError);
-       return;
-     }
-     quizName.value = quizValue.name
+    if (quizError) {
+      console.log(quizError);
+      return;
+    }
+    quizName.value = quizValue.name
 
-     let {data:quizInformation, error:questionError} =await supabase.from('quiz_question').select('id,question').eq('quiz_id',quizId)
-     if(questionError)
-     {
-       console.log(questionError);
-       return;
-     }
+    let {data:quizInformation, error:questionError} =await supabase.from('quiz_question').select('id,question').eq('quiz_id',quizId)
+    if(questionError)
+    {
+      console.log(questionError);
+      return;
+    }
 
-     questions.value=quizInformation?.map((item)=>({
-       question:item.question
-     }));
+    questions.value=quizInformation?.map((item)=>({
+      question:item.question
+    }));
 
-     const{data:answerData,error:answerError}= await supabase.from('quiz_answer').select('answer').in('question_id',quizInformation.map((item)=>item.id));
-     if(answerError){
-     }
-     answers.value=answerData.map((item)=>({
-       answer:item.answer
-     }));
+    const{data:answerData,error:answerError}= await supabase.from('quiz_answer').select('answer').in('question_id',quizInformation.map((item)=>item.id));
+    if(answerError){
+    }
+    answers.value=answerData.map((item)=>({
+      answer:item.answer
+    }));
 
-     const{data:optionData,error:optionError}=await supabase.from('quiz_options').select('A,B,C,D').in('quiz_questions',quizInformation?.map((item)=>item.id))
-     if(optionError)
-     {
-       return;
-     }
-     options.value=optionData.map((item)=>({
-       A:item.A,
-       B:item.B,
-       C:item.C,
-       D:item.D
-     }))
-     await quizStore.setData(quizName.value, questions.value, options.value,answers.value)
+    const{data:optionData,error:optionError}=await supabase.from('quiz_options').select('A,B,C,D').in('quiz_questions',quizInformation?.map((item)=>item.id))
+    if(optionError)
+    {
+      return;
+    }
+    options.value=optionData.map((item)=>({
+      A:item.A,
+      B:item.B,
+      C:item.C,
+      D:item.D
+    }))
+    await quizStore.setData(quizName.value, questions.value, options.value,answers.value)
 
 
-     let quizQuestions=quizStore.questions;
-     let quizOptions=quizStore.options;
-     quizData.value=quizStore.questions.map((item,index)=>({
-       question:item.question,
-       option:quizStore.options[index]
-     }))
-     console.log("QuizData:",quizData)
+    let quizQuestions=quizStore.questions;
+    let quizOptions=quizStore.options;
+    quizData.value=quizStore.questions.map((item,index)=>({
+      question:item.question,
+      option:quizStore.options[index]
+    }))
+    console.log("QuizData:",quizData)
 
-   }
+  }
 
-    catch (error) {
-     console.log(error);
-   }
- }
- let correct=ref(0)
+  catch (error) {
+    console.log(error);
+  }
+}
+let correct=ref(0)
 async function submitQuiz()
 {
   let answers=quizStore.answers;
@@ -258,19 +258,19 @@ async function submitQuiz()
 async function next() {
 
 
- const supabase=useSupabaseClient()
+  const supabase=useSupabaseClient()
   const user=await supabase.auth.getUser();
- const userId=user.data.user?.id;
+  const userId=user.data.user?.id;
   if (!userId) {
     console.error('User is not authenticated');
     return;
   }
- const channel=supabase.channel('ebrahimLobby');
- await channel.send({
-   type:'broadcast',
-   event:'next',
-   payload:{userId}
- })
+  const channel=supabase.channel('ebrahimLobby');
+  await channel.send({
+    type:'broadcast',
+    event:'next',
+    payload:{userId}
+  })
 
 
 
@@ -305,22 +305,22 @@ onMounted(()=>{
   <div class="bg-blue-900 h-screen">
     <div v-if="!quizComplete">
 
-  <h1 class="text-white text-center">
-    Quiz Selected:
-    {{quizName}}
+      <h1 class="text-white text-center">
+        Quiz Selected:
+        {{quizName}}
 
 
-  </h1>
-
-
-
-    <div v-if="quizData.length>0">
+      </h1>
 
 
 
-      Game Starting
+      <div v-if="quizData.length>0">
 
-      {{userAnswer[count]}}
+
+
+        Game Starting
+
+        {{userAnswer[count]}}
 
 
         <div class="bg-white p-5">
@@ -328,99 +328,99 @@ onMounted(()=>{
           <h1 class="text-center">
 
 
-          {{quizData[count].question}}
+            {{quizData[count].question}}
           </h1>
 
 
 
 
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
+          <div  class="bg-gray-400 p-3 rounded-lg mb-3">
 
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.A" v-model="userAnswer[count]"> A
-    </div>
+            <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
+              <input type="radio" name="questionAnswer" :value="quizData[count].option.A" v-model="userAnswer[count]"> A
+            </div>
 
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.A}}
-
-
-
-    </div>
+            <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
+              {{quizData[count].option.A}}
 
 
 
-  </div>
-  {{userAnswer[count]}}
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.B" v-model="userAnswer[count]"> B
-    </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.B}}
-
-    </div>
+            </div>
 
 
 
-  </div>
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
+          </div>
+          {{userAnswer[count]}}
+          <div  class="bg-gray-400 p-3 rounded-lg mb-3">
 
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.C"  v-model="userAnswer[count]"> C
-    </div>
+            <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
+              <input type="radio" name="questionAnswer" :value="quizData[count].option.B" v-model="userAnswer[count]"> B
+            </div>
 
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.C}}
+            <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
+              {{quizData[count].option.B}}
 
-    </div>
-
-
-
-  </div>
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.D"  v-model="userAnswer[count]"> D
-    </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.D}}
+            </div>
 
 
 
+          </div>
+          <div  class="bg-gray-400 p-3 rounded-lg mb-3">
 
-    </div>
+            <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
+              <input type="radio" name="questionAnswer" :value="quizData[count].option.C"  v-model="userAnswer[count]"> C
+            </div>
+
+            <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
+              {{quizData[count].option.C}}
+
+            </div>
 
 
 
-  </div>
+          </div>
+          <div  class="bg-gray-400 p-3 rounded-lg mb-3">
 
+            <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
+              <input type="radio" name="questionAnswer" :value="quizData[count].option.D"  v-model="userAnswer[count]"> D
+            </div>
 
-  {{count}}
-      <button @click="next">
-        Next
-      </button>
-      <div v-if="count==questions.length-1">
-        <button @click="submitQuiz">
-          Submit
-        </button>
-      </div>
+            <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
+              {{quizData[count].option.D}}
 
 
 
 
-    </div>
+            </div>
+
+
+
+          </div>
+
+
+          {{count}}
+          <button @click="next">
+            Next
+          </button>
+          <div v-if="count==questions.length-1">
+            <button @click="submitQuiz">
+              Submit
+            </button>
+          </div>
 
 
 
 
-
-
-
-</div>
         </div>
+
+
+
+
+
+
+
+      </div>
+    </div>
 
 
 

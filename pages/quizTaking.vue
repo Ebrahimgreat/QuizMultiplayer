@@ -6,22 +6,31 @@ import {SupabaseClient} from "@supabase/supabase-js";
 
 const colors=['none','none','none','none']
 import{usequizStore} from "~/stores/quizStart";
+
+
 import {ca} from "cronstrue/dist/i18n/locales/ca";
+import {useRoleStore} from "#imports";
 const quizStore=usequizStore();
+const roleStore=useRoleStore();
 let questions=quizStore.questions;
 let options=quizStore.options;
 let quizAnswers=quizStore.answers
+let challenge=quizStore.challengeId
 const quizData=questions.map((item,index)=>({
   question:item.question,
       option:options[index]
 }));
+let profile=ref('')
 
+let startChallenge=ref(false)
+let receiveChallenge=ref(false);
+async function quizIntialize()
+{
+  const url = new URLSearchParams(window.location.search);
 
-
-
-
-
-
+  startChallenge.value=url.get('startChallenge')
+  receiveChallenge.value=url.get('recieveChallenge');
+}
 
 
 let count=ref(0)
@@ -35,9 +44,32 @@ function next()
 }
 
 let correct=0;
-let score=0;
+let score=ref(0);
+
+async function checkAnswer()
+{
+  if(answers.value[count.value]==quizAnswers[count.value].answer)
+  {
+   alert('Correct Answer')
+    score.value+=10;
+  }
+  else{
+    alert('Sorry Your answer was wrong')
+  }
+  count.value++;
+
+}
+
+async function start()
+{
+  const url = new URLSearchParams(window.location.search);
+
+
+  startChallenge.value=url.get('startChallenge');
+}
 async function quizComplete()
 {
+  profile.value=roleStore.id
 
  for(let i=0; i<quizAnswers.length; i++)
  {
@@ -47,24 +79,64 @@ async function quizComplete()
 
    }
  }
- score=(correct/questions.length)*100;
+ score.value=(correct/questions.length)*100;
 
 
   submitQuiz.value=true;
 
   let supabase=useSupabaseClient();
 
+
+
   let currentUser=useSupabaseUser();
-  try{
-    const{data:pointsInsert,error:insertError}=await supabase.from('points').insert({
-      'user_id':currentUser,
-      'pointsQuestionRatio':score
-    });
-    if(insertError)
-    {
-      console.log("Cannot be inserted");
-      return;
+  try {
+
+
+console.log("Score")
+    if (startChallenge.value) {
+      console.log('challenge',challenge)
+      const {data: challengeData,error:challengeDataError} = await supabase.from('challenge').update({
+        challenger_score: score.value
+      }).eq('id', challenge);
+      if(challengeDataError){
+        console.log(challengeDataError)
+      }
+
     }
+    else if(receiveChallenge.value){
+      console.log('Recieving challenge');
+      const{data:challengeScore,error:challengeDataError}=await supabase.from('challenge').update({
+        recieverScore:score.value,
+      }).eq('id',challenge).select('challengerScore')
+      let winner=ref('')
+      if(score.value>challengeScore)
+      {
+        winner.value='reciever'
+      }
+      else{
+        winner.value='challenger'
+      }
+
+
+
+    }
+
+
+
+    const{data:statsTable,error:statsValueError}=await supabase.rpc('update_stats',{
+      profile_id:profile.value,
+      points_to_add:score.value,
+      games_to_add:1
+
+    })
+
+
+    if(statsValueError){
+      console.log(statsValueError)
+    }
+
+
+
 
   }
   catch(error){
@@ -83,20 +155,27 @@ function previous()
 {
   count.value--;
 }
+
 let answer=ref();
 let answers=ref([]);
 
 
 let submitQuiz=ref(false)
+onMounted(()=>{
+  quizIntialize()
+
+
+})
 </script>
 
 <template>
 
+{{challenge}}
 
   <div v-if="submitQuiz==false">
 <div class="bg-white container shadow-lg rounded-lg">
 
-
+  <h1> CHallenge {{ startChallenge}}</h1>
   <div  class="rounded-lg bg-gray-100 p-2">
 
     {{answers.length}}
@@ -104,9 +183,16 @@ let submitQuiz=ref(false)
 
 
    <div class="bg-white p-5">
+     <div class="mt-8 text-center">
+       Question {{count+1}}/{{quizData.length}}
+     </div>
+     <div class="text-right text-gray-800">
+       <p class="text-sm leading-3"> Score</p>
+       <p class="font-bold"> {{ score }}</p>
+     </div>
 
 
-   <h1 class="text-center">
+   <h1 class="text-center text-5xl text-purple-950 font-bold">
    {{quizData[count].question}}
    </h1>
 
@@ -159,7 +245,7 @@ let submitQuiz=ref(false)
   <div  class="bg-gray-400 p-3 rounded-lg mb-3">
 
     <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.C"  v-model="answers[count]"> D
+      <input type="radio" name="questionAnswer" :value="quizData[count].option.D"  v-model="answers[count]"> D
     </div>
 
     <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
@@ -181,10 +267,8 @@ let submitQuiz=ref(false)
 
 
   <div class="flex items justify-center">
-    <button @click="previous" class="mr-3.5">
-      Previous
-    </button>
-    <button @click="next">
+
+    <button @click="checkAnswer">
       Next
     </button>
   </div>
@@ -203,6 +287,7 @@ let submitQuiz=ref(false)
   </div>
   <div v-else>
     <div class="bg-blue-900 h-screen">
+      Profile{{profile}}
       <h1 class=" text-center text-white text-5xl mb-3" >Your Results</h1>
       <h2 class="text-center text-white"> Attempted:{{answers.length}}</h2>
       <h3 class="text-center text-white"> Correct:{{correct}} </h3>

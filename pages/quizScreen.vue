@@ -7,23 +7,34 @@ let questions=ref([
 ])
 
 let answers=ref([])
-
+let quizId=ref()
+let challengerId=ref()
+let startChallenge=ref()
 let quizName=ref()
+let challengerName=ref()
 
 async function getQuizData() {
+
+
   const url = new URLSearchParams(window.location.search);
-  let quizId = url.get('id');
+   quizId.value = url.get('id');
+challengerId.value=url.get('challengeId');
+   startChallenge.value=url.get('startChallenge');
+
 
   try {
     const supabase = useSupabaseClient();
-    const {data: quizValue, error: quizError} = await supabase.from('quiz').select('name').eq('id', quizId).single();
+    const {data: quizValue, error: quizError} = await supabase.from('quiz').select('name').eq('id', quizId.value).single();
 
     if (quizError) {
       console.log(quizError);
       return;
     }
+    console.log(quizValue)
+
+
     quizName.value=quizValue.name;
-    const {data:quizData, error:questionError} =await supabase.from('quiz_question').select('id,question').eq('quiz_id',quizId)
+    const {data:quizData, error:questionError} =await supabase.from('quiz_question').select('id,question').eq('quiz_id',quizId.value)
     if(questionError)
     {
       console.log(questionError);
@@ -59,7 +70,6 @@ options.value=optionData.map((item)=>({
   D:item.D
 }))
     await quizStore.setData(quizName.value, questions.value, options.value,answers.value)
-
   }
 
   catch(error)
@@ -71,6 +81,10 @@ function startQuiz()
 {
   navigateTo({
     path:'/quizTaking',
+    query:{
+      startChallenge:true,
+
+    }
   })
 }
 onMounted(()=>{
@@ -86,9 +100,10 @@ onMounted(()=>{
     Quiz Rabbit
   </h1>
 
-  <h2 class="text-white"> Name:<b>{{quizName}}</b></h2>
-  <h3 class="text-white"> Total Questions:{{questions.length}}
-  </h3>
+
+  <h3 class="text-white"> Name:<b>{{quizName}}</b></h3>
+  <h4  class="text-white"> Total Questions:{{questions.length}}
+  </h4>
 
   <img src="/images/rabbit.png" class="w-auto h-1/2 object-contain">
   <button @click="startQuiz" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow">
