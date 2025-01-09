@@ -1,88 +1,200 @@
 <script setup lang="ts">
 
-const fields=['Ranking','Name','Points','Invite']
 
-let names=ref([])
-const testData=[
-  {ranking:'1',name:'Ebrahim',points:'500'},
-  {ranking:'2',name:'Eessa',points:'490'},
-  {ranking:'3',name:'Esmail',points:'460'},
-  {ranking:'4',name:'Ali',points:'360'},
-  {ranking:'5',name:'Riaz',points:'320'},
-  {ranking:'6',name:'Asad',points:'310'},
-  {ranking:'7',name:'Ghafoor',points:'300'},
+import{useRoleStore} from "~/stores/role";
+import {useSupabaseUser} from "#imports";
+const roleStore=useRoleStore();
+let role=roleStore.role;
 
 
-
-]
-
-let leaderBoardData=ref([])
-
-function invite()
+async function challengePlayer(item)
 {
-  alert('Invite has been sent ')
+
+  alert(`Invitation to ${item.name} Has been sent`);
+
 }
-
-
-
-async function getPointsofAllPlayers()
+async function getUser()
 {
   let supabase=useSupabaseClient();
-  try{
-    const{data:pointsData,error:errorPoints}=await supabase.from('points').select('*')
-    if(errorPoints)
-    {
-      console.log("error");
-    }
-    leaderBoardData.value=pointsData;
+  console.log(supabase.auth.getUser())
 
-    const{data:profileUser,error:profileError}=await supabase.from('profiles').select('*').eq('role','player');
-    if(profileError){
-      console.log(profileUser)
+}
+let quizInformation=ref([])
+async function getAllQuiz()
+{
+  let supabase=useSupabaseClient();
+  const currentUser=useSupabaseUser();
+  try{
+    const{data:quizData,error:quizError}=await supabase.from('quiz').select('*').eq('users_id',currentUser.value);
+    if(quizError){
+      console.log('Unable to fetch');
+      return;
+
     }
-    names.value=profileUser;
+    quizInformation.value=quizData
 
 
   }
-  catch (error) {
+  catch (error)
+  {
     console.log(error)
   }
+
+
+
 }
+
+
+
+async function logout()
+{
+  try{
+    const supabase=useSupabaseClient();
+    await supabase.auth.signOut();
+    navigateTo('/home');
+  }
+  catch (error)
+  {
+    console.log(error)
+  }
+
+}
+function createNewQuiz()
+{
+  navigateTo('/creatingQuiz')
+}
+
+let teachers=ref();
+
+let profiles=ref([])
+async function getProfileofUsers()
+{
+  const supabase=useSupabaseClient();
+  const{data:profileData,error:profileError}=await supabase.from('profiles').select('*').eq('role',role);
+  if(profileError)
+  {
+    console.log("Error");
+  }
+  profiles.value=profileData;
+
+
+}
+
+async function getCurrentUser() {
+  const supabase = useSupabaseClient();
+
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error('Error fetching current user:', error);
+  } else {
+    console.log('Current user ID:', data.user?.id);
+    console.log('Current user email:', data.user?.email);
+  }
+}
+
 onMounted(()=>{
-  getPointsofAllPlayers()
+  if(role=='player'){
+  getProfileofUsers()
+    }
+   else{
+    getAllQuiz()
+  }
+
 })
+
 </script>
 
 <template>
 
-  <div class="flex flex-col">
-
-    <div class="bg-white p-5">
 
 
-      <h1 class="text-center">
-        LeaderBoard
-      </h1>
+  <div v-if="role=='content Creater'">
+  <h1 class="text-center"> Hello Teacher
+  </h1>
 
-    </div>
-<table class="w-full  bg-blue-900">
-  <tr class="text-white">
-    <th v-for="item in fields" class="px-4 py-2 border">
-      {{item}}
-    </th>
-  </tr>
 
-    <tr v-for="(item,index) in names" class="px-4 py-2 border-b-2 text-white">
-      <td> {{index}} </td>
-      <td> {{item.name}} </td>
-      <td> {{leaderBoardData[index].pointsQuestionRatio}} </td>
-      <td><button @click="invite"> Invite</button> </td>
+  <button @click="createNewQuiz" class="shadow bg-purple-500 hover:bg-purple-400 focus:shadow-outline-none text-white font-bold py-2 px-4 rounded" type="button">
+  Create New Quiz
+  </button>
+  <table class="table-auto h-full w-full text-left text-white">
+      <tr>
+      <th class="px-4 py-2 border-blue-100 text-black">
+       Name </th>
+        <th class="px-4 py-2 boredr gray-100 text-black">
+          Category
+        </th>
+        <th class="px-4 py-2 boredr gray-100 text-black">
+Status
+        </th>
 
+        <th class="px-4 py-2 border gray-100 text-black">
+      View
+     </th>
+     <th class="px-4 py-2 boredr gray-100 text-black">
+       Delete
+     </th>
+        <th class="px-4 py-2 boredr gray-100 text-black">
+          Deactivate
+        </th>
     </tr>
+   <tr v-for="item in quizInformation" class="px-4 py-2 border gray-100 text-black">
+     <td>
+       {{item.name}}
+
+     </td>
+     <td>
+
+     </td>
+     <td>
+       {{item.status}}
+     </td>
+
+   </tr>
+
+ </table>
 
 
-</table>
+
   </div>
+
+  <div v-if="role=='player'">
+    <h2 class="text-black text-center">
+      List of Players that have registered
+    </h2>
+
+
+
+    <table class="auto h-full w-full">
+      <tr>
+        <th class="px-4 py-2">
+          Name
+
+        </th>
+        <th class="px-4 py-2">
+
+       Add Friend
+        </th>
+
+
+
+
+      </tr>
+      <tr v-for="item in profiles" class="border">
+        <td class="px-4 py-2">{{item.name}}</td>
+        <td> <button @click="challengePlayer(item)">Send Request
+        </button>
+        </td>
+      </tr>
+
+
+    </table>
+
+  </div>
+
+  <div class="flex-col items-center justify-center">
+  </div>
+
 </template>
 
 <style scoped>
