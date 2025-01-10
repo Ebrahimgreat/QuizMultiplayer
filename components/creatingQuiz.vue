@@ -171,8 +171,8 @@ async function createQuiz()
 
   <p class="text-center text-white bg-black">New Quiz</p>
   <div class="bg-amber-600 p-4 border-2">
-    <input type="text" v-model="quizName" placeholder="Enter quiz name" class="w-full py-2 border border-indigo-500 rounded mr-5">
-   <input type="text" placeholder="Quiz Bio" class="w-full py-2 border border-indigo-500 rounded mt-4">
+    <input type="text" v-model="quizName" placeholder="Enter quiz name" class="w-full py-2 border border-indigo-500 rounded mr-5 text-black">
+   <input type="text" placeholder="Quiz Bio" class="w-full py-2 border border-indigo-500 rounded mt-4 text-black">
     <h1 class="text-center text-white"> Choose a category
    </h1>
   <div class="grid grid-cols-4 gap-4 ">
@@ -203,7 +203,7 @@ async function createQuiz()
 
     <input placeholder="Enter Your Question" v-model="item.question" class="w-full py-2 border border-indigo-500 rounded mr-5">
 
-    <input v-model="answers[index].answer"  placeholder="Enter Your Answer" class="w-full py-2 border border-indigo-500 rounded mr-3.5">
+    <input v-model="answers[index].answer"  placeholder="Enter Your Answer" class="w-full py-2 border border-indigo-500 rounded mr-3.5 text-black">
   </div>
     <div class="grid grid-cols-2 gap-4">
     <input type="text" v-model="options[index].option.A"  placeholder="A" class=" py-2 border-border-indigo-500 rounded">
@@ -241,7 +241,7 @@ async function createQuiz()
 
 
     <div class="flex flex-col items-center">
-    <button @click="createQuiz" class="bg-blue-50">
+    <button @click="createQuiz" class="text-black">
       Create
     </button>
     </div>
