@@ -377,8 +377,6 @@ onMounted(()=>{
         <div class="bg-white p-5">
 
           <h1 class="text-center text-black">
-
-
             {{quizData[count].question}}
           </h1>
 
