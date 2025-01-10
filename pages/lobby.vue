@@ -219,8 +219,6 @@ async function subscribeToLobby() {
 
 }
 
-let quizId=ref(0)
-
 
 async function getQuizData() {
   let supabase = useSupabaseClient();
@@ -378,7 +376,7 @@ onMounted(()=>{
 
         <div class="bg-white p-5">
 
-          <h1 class="text-center">
+          <h1 class="text-center text-black">
 
 
             {{quizData[count].question}}
@@ -457,7 +455,7 @@ onMounted(()=>{
           </button>
           <div v-if="count==questions.length-1">
             <button @click="submitQuiz">
-              Submit
+              <h4 class="text-black"> Submit</h4>
             </button>
           </div>
 
