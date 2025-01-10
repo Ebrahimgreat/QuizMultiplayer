@@ -119,7 +119,6 @@ async function subscribeToLobby() {
     if(users.value.length==1){
       const{data:challengeResult,error}=await  supabase.from('challenge').insert({
         challenger_id:payload.new.user_profile_id,
-        quiz_id:quizId.value
       }).select('id').single()
       challengeId.value=challengeResult;
 
