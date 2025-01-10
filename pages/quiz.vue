@@ -132,12 +132,12 @@ let showOptions=ref(false);
 
 
 let quizSelected=ref(true)
-function online(id)
+function online()
 {
   navigateTo({
     path:'/lobby',
     query:{
-      id:id
+      id:quizChosen.value.id
     }
   })
 
@@ -184,117 +184,114 @@ onMounted(()=>{
 
 
 
-  <div v-if="role=='player'">
+  <div class="bg-gray-900 h-screen w-full p-6 text-white">
+    <div v-if="role == 'player'">
+      <div class="h-full flex flex-col bg-gray-900">
+        <h1 class="text-center text-3xl mb-4">Choose a Category</h1>
 
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <button
+              v-for="(item, index) in categories"
+              :key="index"
+              :value="index"
+              class="border p-4 text-center rounded-lg transition duration-300"
+              :class="
+              selected == index ? 'bg-blue-500' : 'bg-white text-gray-900'
+            "
+              @click="categorySelected(index, item)"
+          >
+            {{ item }}
+          </button>
+        </div>
 
-    <div class="h-screen flex flex-col bg-blue-900">
-
-      <h1 class="text-center text-white">
-        Choose a Category
-      </h1>
-
-      <div class="grid grid-cols-2 gap-4 border-b-2">
-        <button  :value="index" v-for="(item,index) in categories" class="border p-4 text-center bg-gray-400" v-bind:style="{backgroundColor:selected==index?'blue':'white'}" @click="categorySelected(index,item)">
-          {{item}}
-        </button>
-      </div>
-      <div>
-      <div v-for="item in filteredArray">
-
-        <div v-if="item.name=='' || item.name==null">
+        <div
+            v-if="filteredArray.length === 0"
+            class="text-center text-white mb-4"
+        >
           There are no results
         </div>
-      </div>
-        <h2 class="text-center">
-          <button>
-            Next
-          </button>
-        </h2>
 
-
-
-
-        <h2 class="text-center text-white"> Showing Quiz of Category Selected
-</h2>
-        <div class="grid flex-col items-center justify-center">
-          <div v-for="(item,index) in filteredArray">
-
-
-            <div v-if="quizSelected">
-            <button @click="toggleOption(item)" class="block text-white text-sm font-bold mb-2  shadow appearance-none border border-red-500 rounded w-full py-2 px-3  leading-tight focus:outline-none">{{item.name}}</button>
-            </div>
+        <div v-else>
+          <h2 class="text-center text-2xl mb-4">
+            Showing Quiz of Category Selected
+          </h2>
+          <div class="grid grid-cols-1 gap-4 mb-6">
+            <button
+                v-for="(item, index) in filteredArray"
+                :key="index"
+                @click="toggleOption(item)"
+                class="block text-white text-sm font-bold mb-2 shadow appearance-none border border-red-500 rounded w-full py-2 px-3 leading-tight focus:outline-none transition duration-300 hover:bg-red-600"
+            >
+              {{ item.name }}
+            </button>
           </div>
 
-            <div v-if="quizChosen">
-            Quiz Selected:{{quizChosen.name}}
-            </div>
+          <div v-if="quizChosen" class="text-center text-white mb-4">
+            Quiz Selected: {{ quizChosen.name }}
+          </div>
 
-      <div v-if="showOptions" class="grid grid-cols-3 gap-4 border-b-2">
+          <div v-if="showOptions" class="grid grid-cols-2 gap-4 mb-6">
+            <button
+                @click="quizMainScreen('')"
+                class="block text-white text-sm font-bold shadow appearance-none border p-4 rounded w-full transition duration-300 hover:bg-gray-700"
+            >
+              Solo
+            </button>
 
-     <button @click="quizMainScreen('')" class="block text-white text-sm font-bold mr-12 shadow appearance-none border p-4 rounded w-full">
-       Solo
-     </button>
-
-        <button @click="toggleChallenge" class="block text-white text-sm font-bold mb-2 shadow appearance-none border border-red-500 rounded w-full">Challenge</button>
-
-
-
-
-
-        <div v-if="challengeOption" class="flex flex-col">
-
-
-          <h3 class="text-white mb-2" > Choose a Player </h3>
-          <div class="overflow-y-auto max-h-64 border border-gray-300 rounded-md">
-          <table>
-            <tr>
-
-       <th> Name</th>
-              <th> Challenge</th>
-            </tr>
-
-            <tr v-for="item in players">
-              <td class="text-white">
-               {{item.name}}
-              </td>
-            <td class="text-white">
-              <button @click="quizMainScreen(item.id)">
-
-
-
+            <button
+                @click="toggleChallenge"
+                class="block text-white text-sm font-bold shadow appearance-none border border-red-500 rounded w-full transition duration-300 hover:bg-red-600"
+            >
               Challenge
-              </button>
-            </td>
-            </tr>
+            </button>
 
+            <button
+                @click="online"
+                class="block text-white text-sm font-bold shadow appearance-none border border-red-500 rounded w-full transition duration-300 hover:bg-red-600"
+            >
+              play online
+            </button>
+          </div>
 
-
-
-
-
-
-          </table>
+          <div v-if="challengeOption" class="flex flex-col items-center mb-6">
+            <h3 class="text-white mb-2">Choose a Player</h3>
+            <div
+                class="overflow-y-auto max-h-64 border border-gray-300 rounded-md w-full"
+            >
+              <table class="w-full bg-white text-gray-900 rounded-lg shadow-lg">
+                <thead>
+                <tr class="bg-gray-800 text-white">
+                  <th class="p-4">Name</th>
+                  <th class="p-4">Challenge</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="item in players" :key="item.id" class="border-b">
+                  <td class="p-4 text-white">{{ item.name }}</td>
+                  <td class="p-4">
+                    <button
+                        @click="quizMainScreen(item.id)"
+                        class="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition duration-300"
+                    >
+                      Challenge
+                    </button>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-
-
-
       </div>
     </div>
-        </div>
 
+    <div v-if="role == 'content Creater'">
+      <creating-quiz></creating-quiz>
     </div>
-    </div>
-
-
-  <div v-if="role=='content Creater'">
-
-    <creating-quiz>
-
-    </creating-quiz>
   </div>
-
 </template>
+
+
 
 <style scoped>
 

@@ -10,7 +10,7 @@ export default defineNuxtRouteMiddleware(async (to,from)=>{
 
     let profileData=ref([])
 
-    console.log("middleware running")
+
 
     const user=useSupabaseUser();
 

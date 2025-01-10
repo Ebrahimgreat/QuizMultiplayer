@@ -91,29 +91,30 @@ onMounted(()=>{
   getQuizData()
 })
 </script>
-
 <template>
 
-<div class="bg-blue-900 h-screen flex flex-col items-center justify-center">
+<div
+    class="bg-gray-900 h-screen flex flex-col items-center justify-center p-6 text-white"
+>
+<h1 class="text-center text-5xl mb-4">Quiz Rabbit</h1>
 
-  <h1 class="text-center text-white text-5xl">
-    Quiz Rabbit
-  </h1>
+<h3 class="text-2xl mb-2">
+  Name: <b>{{ quizName }}</b>
+</h3>
+<h4 class="text-xl mb-6">Total Questions: {{ questions.length }}</h4>
 
+<img src="/images/rabbit.png" class="w-auto h-1/2 object-contain mb-6" />
 
-  <h3 class="text-white"> Name:<b>{{quizName}}</b></h3>
-  <h4  class="text-white"> Total Questions:{{questions.length}}
-  </h4>
-
-  <img src="/images/rabbit.png" class="w-auto h-1/2 object-contain">
-  <button @click="startQuiz" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow">
-    Start Quiz
-  </button>
-
+<button
+    @click="startQuiz"
+    class="bg-white text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow hover:bg-gray-100 transition duration-300"
+>
+  Start Quiz
+</button>
 </div>
-
-
 </template>
+
+
 
 <style scoped>
 

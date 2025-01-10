@@ -28,9 +28,12 @@ async function register()
     }
 
     let user=useSupabaseUser();
-    const{data,error}=await supabase.from('profiles').insert({
+    const{data:userId,error:errorData}=await supabase.from('profiles').insert({
       'user_id':user.value,
 
+    }).select('*').single()
+    const{data,error}=await  supabase.from('stats').insert({
+      'user_profile_id':userId.id
     })
 
     navigateTo('/home');

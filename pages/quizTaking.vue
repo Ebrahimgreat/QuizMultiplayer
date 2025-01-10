@@ -169,140 +169,162 @@ onMounted(()=>{
 </script>
 
 <template>
+  <div
+      class="bg-gray-900 min-h-screen w-full p-6 text-white flex flex-col items-center justify-center overflow-auto"
+  >
+    <div v-if="submitQuiz == false" class="w-[75%]">
+      <div class="bg-white shadow-lg rounded-lg p-6 w-full overflow-y-auto">
+        <h1 class="text-3xl text-center mb-4">
+          Challenge {{ startChallenge }}
+        </h1>
+        <div class="rounded-lg bg-gray-100 p-2 mb-4">
+          {{ answers.length }}
+        </div>
 
-{{challenge}}
+        <div class="bg-white p-5 rounded-lg shadow-lg">
+          <div class="text-center text-2xl mb-4">
+            Question {{ count + 1 }}/{{ quizData.length }}
+          </div>
 
-  <div v-if="submitQuiz==false">
-<div class="bg-white container shadow-lg rounded-lg">
+          <div class="text-center mb-6">
+            <div class="bg-gray-100 rounded-lg inline-block px-8 py-3">
+              <p class="text-gray-700 text-lg font-medium">Current Score</p>
+              <p class="text-4xl font-bold text-purple-950">{{ score }}</p>
+            </div>
+          </div>
 
-  <h1> CHallenge {{ startChallenge}}</h1>
-  <div  class="rounded-lg bg-gray-100 p-2">
+          <h1
+              class="text-center text-4xl text-purple-950 font-bold mb-6 p-4 bg-gray-100 rounded-lg"
+          >
+            {{ quizData[count].question }}
+          </h1>
 
-    {{answers.length}}
-<div>
+          <div class="bg-gray-400 p-3 rounded-lg mb-3">
+            <div class="bg-red-600 rounded-lg font-bold p-2 flex w-12">
+              <input
+                  type="radio"
+                  name="questionAnswer"
+                  :value="quizData[count].option.A"
+                  v-model="answers[count]"
+              />
+              A
+            </div>
+            <div
+                class="flex items-center justify-center hover:bg-red-500 font-bold text-gray-800 mt-4 p-2 rounded-lg transition duration-300"
+            >
+              {{ quizData[count].option.A }}
+            </div>
+          </div>
 
+          <div class="bg-gray-400 p-3 rounded-lg mb-3">
+            <div class="bg-red-600 rounded-lg font-bold p-2 flex w-12">
+              <input
+                  type="radio"
+                  name="questionAnswer"
+                  :value="quizData[count].option.B"
+                  v-model="answers[count]"
+              />
+              B
+            </div>
+            <div
+                class="flex items-center justify-center hover:bg-red-500 font-bold text-gray-800 mt-4 p-2 rounded-lg transition duration-300"
+            >
+              {{ quizData[count].option.B }}
+            </div>
+          </div>
 
-   <div class="bg-white p-5">
-     <div class="mt-8 text-center">
-       Question {{count+1}}/{{quizData.length}}
-     </div>
-     <div class="text-right text-gray-800">
-       <p class="text-sm leading-3"> Score</p>
-       <p class="font-bold"> {{ score }}</p>
-     </div>
+          <div class="bg-gray-400 p-3 rounded-lg mb-3">
+            <div class="bg-red-600 rounded-lg font-bold p-2 flex w-12">
+              <input
+                  type="radio"
+                  name="questionAnswer"
+                  :value="quizData[count].option.C"
+                  v-model="answers[count]"
+              />
+              C
+            </div>
+            <div
+                class="flex items-center justify-center hover:bg-red-500 font-bold text-gray-800 mt-4 p-2 rounded-lg transition duration-300"
+            >
+              {{ quizData[count].option.C }}
+            </div>
+          </div>
 
+          <div class="bg-gray-400 p-3 rounded-lg mb-3">
+            <div class="bg-red-600 rounded-lg font-bold p-2 flex w-12">
+              <input
+                  type="radio"
+                  name="questionAnswer"
+                  :value="quizData[count].option.D"
+                  v-model="answers[count]"
+              />
+              D
+            </div>
+            <div
+                class="flex items-center justify-center hover:bg-red-500 font-bold text-gray-800 mt-4 p-2 rounded-lg transition duration-300"
+            >
+              {{ quizData[count].option.D }}
+            </div>
+          </div>
 
-   <h1 class="text-center text-5xl text-purple-950 font-bold">
-   {{quizData[count].question}}
-   </h1>
+          <div
+              v-if="count >= quizData.length - 1"
+              class="flex items-center justify-center mt-6"
+          >
+            <button
+                @click="quizComplete"
+                class="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition duration-300"
+            >
+              Submit Quiz
+            </button>
+          </div>
 
-   </div>
+          <div class="flex items-center justify-center mt-6">
+            <button
+                @click="checkAnswer"
+                class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition duration-300"
+            >
+              Next
+            </button>
+          </div>
 
-      <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-   <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-<input type="radio" name="questionAnswer" :value="quizData[count].option.A" v-model="answers[count]"> A
-   </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.A}}
-
-
-
+          <div class="mt-8 text-center">
+            <div class="h-1 w-12 bg-gray-800 rounded-full mx-auto">
+              <p class="font-bold text-gray-800">
+                {{ count + 1 }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-
-
-  </div>
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.B" v-model="answers[count]"> B
-    </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-      {{quizData[count].option.B}}
-
-    </div>
-
-
-
-  </div>
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.C"  v-model="answers[count]"> C
-    </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-    {{quizData[count].option.C}}
-
-    </div>
-
-
-
-  </div>
-  <div  class="bg-gray-400 p-3 rounded-lg mb-3">
-
-    <div class="bg-red-600 rounded -lg font-bold p-2 flex w-12">
-      <input type="radio" name="questionAnswer" :value="quizData[count].option.D"  v-model="answers[count]"> D
-    </div>
-
-    <div class="flex items justify-center hover:bg-red font-bold text-gray-800 mt-4">
-    {{quizData[count].option.D}}
-
-
-
-
-    </div>
-
-
-
-  </div>
-
-  <div v-if="count>=quizData.length-1" class="items-center">
-    <button @click="quizComplete"> Submit Quiz</button>
-  </div>
-
-
-
-  <div class="flex items justify-center">
-
-    <button @click="checkAnswer">
-      Next
-    </button>
-  </div>
-
-
-<div class="mt-8 text-center" >
-  <div class="h-1 w-12 bg-gray-800 rounded-full mx-auto">
-    <p class="font-bold text-gray-800">
-    {{count+1}}
-    </p>
-  </div>
-</div>
-</div>
-  </div>
-</div>
-  </div>
-  <div v-else>
-    <div class="bg-blue-900 h-screen">
-      Profile{{profile}}
-      <h1 class=" text-center text-white text-5xl mb-3" >Your Results</h1>
-      <h2 class="text-center text-white"> Attempted:{{answers.length}}</h2>
-      <h3 class="text-center text-white"> Correct:{{correct}} </h3>
-      <h4 class="text-center text-white"> Score:{{score}}</h4>
-      <h5 class="text-center text-white">
-        <NuxtLink to="/home">
-        Back To Home
-      </NuxtLink>
-      </h5>
-
+    <div v-else>
+      <div
+          class="bg-gray-900 h-screen flex flex-col items-center justify-center p-6"
+      >
+        <h1 class="text-center text-5xl mb-3">Your Results</h1>
+        <h2 class="text-center text-2xl mb-2">
+          Attempted: {{ answers.length }}
+        </h2>
+        <h3 class="text-center text-2xl mb-2">Correct: {{ correct }}</h3>
+        <h4 class="text-center text-2xl mb-2">Score: {{ score }}</h4>
+        <h5 class="text-center text-2xl mb-2">
+          <NuxtLink
+              to="/home"
+              class="text-blue-500 hover:text-blue-700 transition duration-300"
+          >
+            Back To Home
+          </NuxtLink>
+        </h5>
+      </div>
     </div>
   </div>
-
-
 </template>
+
+
+
+
 
 <style scoped>
 

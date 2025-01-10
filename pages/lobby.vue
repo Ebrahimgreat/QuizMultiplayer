@@ -6,6 +6,12 @@ import {SupabaseClient} from "@supabase/supabase-js";
 
 import{usequizStore} from "~/stores/quizStart";
 const quizStore=usequizStore();
+import{useRoleStore} from "~/stores/role";
+
+
+const roleStore=useRoleStore();
+let userName=roleStore.name
+let userId=roleStore.id
 
 let users=ref([])
 let count=ref(0)
@@ -17,46 +23,59 @@ let questions=ref([])
 let answers=ref([])
 let options=ref([])
 let quizData=ref([])
-
 let quizFetched=ref(false)
 
-
+let winnerName=ref()
+let winnerId=ref()
 
 
 async function getcurrentUser() {
   const supabase = useSupabaseClient();
 
   const user = supabase.auth.getUser();
-  console.log((await user).data.user?.email)
+
 
 }
 
 
+
+let profiles=ref([])
 async function joinLobby()
 {
   const supabase = useSupabaseClient();
   const user = await supabase.auth.getUser();
+
 
   if (!user.data.user) {
     console.error('User not authenticated');
     return;
   }
 
+
+
   const userId = user.data.user.id;
 
+
+
+
   try {
-    const { data, error } = await supabase.from('lobby').insert({
-      user_id: userId,
-      lobby_name:'ebrahimLobby'
+    const {
+      data: profileData,
+      error: profileError
+    } = await supabase.from('profiles').select('*').eq('user_id', userId).single();
+
+    profiles.value = profileData
+    const {data: profileValues, error: errorProfile} = await supabase.from('lobby').insert({
+      user_profile_id: profileData.id,
+      lobby_name: 'ebrahimLobby'
+
     });
 
-    if (error) throw error;
 
-    console.log('User joined the lobby:', data);
-  } catch (err) {
-    console.error('Error joining the lobby:', err);
+
   }
-
+  catch (error){
+  console.log(error)}
 }
 
 
@@ -80,7 +99,9 @@ let winner=ref([])
 
 let results=ref([])
 
+let status=ref('')
 
+let challengeId=ref()
 async function subscribeToLobby() {
   const supabase = useSupabaseClient();
 
@@ -89,9 +110,23 @@ async function subscribeToLobby() {
     schema: 'public',
     table: 'lobby',
   }, async (payload) => {
+    console.log(payload)
 
-    if (!users.value.some((user) => user.user_id === payload.new.user_id)) {
+    if (!users.value.some((user) => user.user_profile_id === payload.new.user_profile_id)) {
       users.value.push(payload.new);
+
+    }
+    if(users.value.length==1){
+      const{data:challengeResult,error}=await  supabase.from('challenge').insert({
+        challenger_id:payload.new.user_profile_id,
+      }).select('id').single()
+      challengeId.value=challengeResult;
+
+    }
+    if(users.value.length==2){
+      const{data,error}=await  supabase.from('challenge').update({
+        reciever_id:payload.new.user_profile_id,
+      }).eq('id',challengeId.value.id)
     }
 
     if (users.value.length === 2 && !quizFetched.value) {
@@ -102,15 +137,15 @@ async function subscribeToLobby() {
 
     }
   }).subscribe();
-  console.log("Game Start value:",gameStart.value,"Next button",nextButton.value)
 
   if(gameStart.value && nextButton.value) {
-    console.log('Next is true')
   }
 
   supabase.channel('ebrahimLobby').on('broadcast', { event: 'next' }, (eventPayload) => {
-    const userId = eventPayload.payload.userId;
+    const userId = eventPayload.payload.id;
     if (!moveNext.value.includes(userId)) {
+
+
       moveNext.value.push(userId);
     }
     if (moveNext.value.length === 2) {
@@ -121,49 +156,71 @@ async function subscribeToLobby() {
   });
 
 
-  supabase.channel('ebrahimLobby').on('broadcast',{event:'submit'},(eventPayload)=>{
+  supabase.channel('ebrahimLobby').on('broadcast',{event:'submit'},async (eventPayload) => {
 
-    console.log("function executing")
-    const{userId,correct}=eventPayload.payload;
-    if(!results.value.includes(userId)){
-      results.value.push({userId,correct})
 
+    const {profile, correct} = eventPayload.payload;
+    if (!results.value.includes(profile)) {
+      results.value.push({profile, correct})
     }
 
-    if(results.value.length==2)
-    {
-      let correctAnswer=0
-      let player='';
-      results.value.forEach((item)=> {
-        if (item.correct > correctAnswer) {
-          correctAnswer = item.correct;
-          player=item.userId;
-          console.log(item.userId)
+
+    if (results.value.length == 2) {
+      let correctAnswer = 0
+      let player = '';
+
+       winnerId.value=results.value[0]?.profile;
+
+
+
+      results.value.forEach((item) => {
+        if (results.value[1]?.correct > correctAnswer) {
+          correctAnswer = results.value[1]?.correct;
+          winnerId.value = results.value[1].profile
+
 
         }
       });
-      winner.value={
-        playerName:player,
-        answerCorrect:correctAnswer
+
+
+
+      const{data:statsTable,error:statsValueError}=await supabase.rpc('update_stats',{
+        profile_id:results.value[0].profile,
+        points_to_add:(results.value[0].correct)*10,
+        games_to_add:1
+
+      })
+      const{data:statsTable1,error:statsValurError1}=await supabase.rpc('update_stats',{
+        profile_id:results.value[1].profile,
+        points_to_add:(results.value[1].correct)*10,
+        games_to_add:1
+
+      })
+
+      const {data: quizScoreUpdate, error: quizScoreError} = await supabase.from('challenge').update({
+          challenger_score: results.value[0]?.correct,
+          challenge_recieverScore: results.value[1]?.correct,
+          winner: winnerId.value
+
+        }).eq('id', challengeId.value.id);
+        if (quizScoreError) {
+          console.log(quizScoreError)
+        }
+
+
+        quizComplete.value = true;
+
+
       }
 
 
 
-
-      quizComplete.value=true;
-
-      console.log("quiz has been completed")
-    }
-
-
   })
-
 
 }
 
 
 async function getQuizData() {
-  console.log('getting quiz data')
   let supabase = useSupabaseClient();
   const url = new URLSearchParams(window.location.search);
   let quizId = url.get('id');
@@ -216,7 +273,6 @@ async function getQuizData() {
       question:item.question,
       option:quizStore.options[index]
     }))
-    console.log("QuizData:",quizData)
 
   }
 
@@ -230,8 +286,7 @@ async function submitQuiz()
   let answers=quizStore.answers;
   for(let i=0; i<userAnswer.value.length; i++)
   {
-    console.log(answers[i].answer)
-    console.log(userAnswer.value[i])
+
     if(userAnswer.value[i]==answers[i].answer)
     {
 
@@ -243,13 +298,13 @@ async function submitQuiz()
   }
 
   const supabase=useSupabaseClient()
-  const user=await supabase.auth.getUser();
-  const userId=user.data.user?.id;
+
+  let profile=roleStore.id
   const channel=supabase.channel('ebrahimLobby');
   await channel.send({
     type:'broadcast',
     event:'submit',
-    payload:{userId,correct:correct.value}
+    payload:{profile,correct:correct.value}
   })
 
 
@@ -257,19 +312,15 @@ async function submitQuiz()
 }
 async function next() {
 
-
-  const supabase=useSupabaseClient()
-  const user=await supabase.auth.getUser();
-  const userId=user.data.user?.id;
-  if (!userId) {
-    console.error('User is not authenticated');
-    return;
-  }
+console.log(profiles.value.id)
+let supabase=useSupabaseClient()
   const channel=supabase.channel('ebrahimLobby');
   await channel.send({
     type:'broadcast',
     event:'next',
-    payload:{userId}
+    payload:{id:profiles.value.id}
+
+
   })
 
 
@@ -287,10 +338,13 @@ onMounted(()=>{
 
 
 
-
 </script>
 
 <template>
+
+
+
+
 
 
 
@@ -299,10 +353,7 @@ onMounted(()=>{
   </button>
 
 
-
-
-
-  <div class="bg-blue-900 h-screen">
+  <div class="bg-gray-900 h-screen w-full p-6 text-white">
     <div v-if="!quizComplete">
 
       <h1 class="text-white text-center">
@@ -400,7 +451,7 @@ onMounted(()=>{
 
           {{count}}
           <button @click="next">
-            Next
+            <h2 class="text-center text-black" >Next</h2>
           </button>
           <div v-if="count==questions.length-1">
             <button @click="submitQuiz">
@@ -436,18 +487,19 @@ onMounted(()=>{
       </h3>
 
 
-      <ul>
-        <li v-for="result in results">
-          User :{{result.userId}},  correct Answers: {{result.correct}}
-        </li>
-      </ul>
-      Winner:{{winner.playerName}}
+
+      <div v-if="winnerId==userId">
+        You are winner
 
     </div>
+      <div v-else>
+        You are a looser
+      </div>
+
   </div>
 
 
-
+</div>
 
 
 
