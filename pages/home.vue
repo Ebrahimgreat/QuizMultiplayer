@@ -6,6 +6,8 @@ const useRole = useRoleStore();
 import { useSupabaseUser } from "#imports";
 
 
+let playerChallenge=ref([])
+
 let role = useRole.role;
 let name = useRole.name;
 let user = ref();
@@ -40,6 +42,7 @@ async function getChallenges() {
         ...challengeValues?.map((challenge) => challenge.reciever_id),
       ]),
     ];
+    console.log("Users",userIds)
 
 
 
@@ -56,7 +59,7 @@ async function getChallenges() {
     console.log("Profiles", userProfiles);
 
 
-    challengePlayers.value = challengeValues.map((challenge) => ({
+    challengePlayers.value = challengeValues?.map((challenge) => ({
       ...challenge,
       user_profile_name: userProfiles.find(
           (user) => user.id === challenge.reciever_id
@@ -64,7 +67,7 @@ async function getChallenges() {
       challenger_name: userProfiles.find(
           (user) => user.id === challenge.challenger_id
       )?.name || 'unkown'
-    }));
+    }))??[];
     console.log("players",challengePlayers.value)
   } catch (error) {
     console.log(error);
@@ -87,7 +90,7 @@ async function getStats() {
       console.log(errorValues);
     }
     stats.value = statsValues;
-    console.log("Stats", statsValues);
+
   } catch (error) {
     console.log(error);
   }
@@ -113,7 +116,7 @@ async function getUser() {
   let userGet = useSupabaseUser();
 
   user.value = userGet.value?.id;
-  console.log("User", user.value);
+
   try {
     let supabase = useSupabaseClient();
     const { data: userData, error: errorUser } = await supabase
@@ -165,12 +168,15 @@ onMounted(() => {
 <template>
 
 
+
   <div class="bg-gray-900 h-screen w-full p-6 text-white">
     <h1 class="text-4xl mb-6">Profile</h1>
 
-    {{challengePlayers}}
+
 
     <div v-if="role == 'player'">
+
+      {{challengePlayers}}
 
       <h1 class="text-3xl text-center mb-4">Player: {{ name }}</h1>
 

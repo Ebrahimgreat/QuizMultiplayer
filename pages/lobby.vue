@@ -119,6 +119,7 @@ async function subscribeToLobby() {
     if(users.value.length==1){
       const{data:challengeResult,error}=await  supabase.from('challenge').insert({
         challenger_id:payload.new.user_profile_id,
+        quiz_id:quizId.value
       }).select('id').single()
       challengeId.value=challengeResult;
 
@@ -219,11 +220,13 @@ async function subscribeToLobby() {
 
 }
 
+let quizId=ref(0)
+
 
 async function getQuizData() {
   let supabase = useSupabaseClient();
   const url = new URLSearchParams(window.location.search);
-  let quizId = url.get('id');
+   quizId.value = url.get('id');
 
   try {
     const supabase = useSupabaseClient();
@@ -479,7 +482,7 @@ onMounted(()=>{
 
 
       <h1 class="text-center text-white text-4xl"> Quiz Rabbit:</h1>
-      <img src="/images/rabbit.png" class="w-auto h-1/2 object-contain">
+
 
       <h2 class="text-white"> Results Summary</h2>
       <h3 class="text-white">
@@ -487,7 +490,11 @@ onMounted(()=>{
       </h3>
 
 
-
+      <ul>
+        <li v-for="result in results">
+          User :{{result.userId}},  correct Answers: {{result.correct}}
+        </li>
+      </ul>
       <div v-if="winnerId==userId">
         You are winner
 

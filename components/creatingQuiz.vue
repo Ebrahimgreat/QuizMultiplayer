@@ -177,7 +177,7 @@ async function createQuiz()
    </h1>
   <div class="grid grid-cols-4 gap-4 ">
 
-   <button v-for="(item,index) in items" class="border p-4 text-center bg-grey-900"  v-bind:style="{backgroundColor:selected===index?'blue': 'white'}" @click="categorySelected(index,item)">
+   <button v-for="(item,index) in items" class="border p-4 text-center text-black bg-grey-900"  v-bind:style="{backgroundColor:selected===index?'blue': 'white'}" @click="categorySelected(index,item)">
      {{item}}
    </button>
   </div>
