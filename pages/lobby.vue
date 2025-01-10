@@ -225,7 +225,7 @@ let quizId=ref(0)
 async function getQuizData() {
   let supabase = useSupabaseClient();
   const url = new URLSearchParams(window.location.search);
-   quizId.value = url.get('id');
+   let quizId = url.get('id');
 
   try {
     const supabase = useSupabaseClient();
