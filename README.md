@@ -1,75 +1,15 @@
-# Nuxt Minimal Starter
+Quiz Multiplier is a role-based quiz platform where creators can build quizzes by category and players can join and play. Built with Nuxt and Supabase, it supports live gameplay and secure access through RBAC (Role-Based Access Control).
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+✨ Features
+	•	🔑 Authentication & RBAC – Role-based dashboards for quiz creators and players
+	•	📝 Quiz Creation – Creators can design quizzes by category with flexible question types
+	•	🎮 Quiz Playing – Players can take quizzes in real time or asynchronously
+	•	⚡ Live Support – Host live quiz sessions with multiple players
+	•	📊 Score Tracking – View results and leaderboard after each quiz
 
-## Setup
+🚀 Tech Stack
+	•	Frontend: Nuxt
+	•	Backend & Database: Supabase
+	•	Auth & RBAC: Supabase Auth
+	•	Live Features: Supabase Realtime
 
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
