@@ -17,24 +17,22 @@ async function register()
 {
   const supabase=useSupabaseClient()
   try{
+    // profile + stats rows are created by the on_auth_user_created trigger
     const{data:signUp,error:signUpError}=await  supabase.auth.signUp({
       email:credentials.value.email,
-      password:credentials.value.password
+      password:credentials.value.password,
+      options:{
+        data:{
+          name:name.value,
+          role:roleSelected.value
+        }
+      }
     })
     if(signUpError)
     {
-      console.log("Error");
+      console.log(signUpError);
       return;
     }
-
-    let user=useSupabaseUser();
-    const{data:userId,error:errorData}=await supabase.from('profiles').insert({
-      'user_id':user.value,
-
-    }).select('*').single()
-    const{data,error}=await  supabase.from('stats').insert({
-      'user_profile_id':userId.id
-    })
 
     navigateTo('/home');
   }
@@ -57,7 +55,7 @@ async function register()
         <label class="block text-white text-sm font-bold mb-2">
           Name
         </label>
-        <input v-model="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="email" placeholder="Ebrahim">
+        <input v-model="name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="name" type="text" placeholder="Ebrahim">
 
         <label class="block text-white text-sm font-bold mb-2">
           Email

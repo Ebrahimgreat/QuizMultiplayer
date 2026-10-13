@@ -13,3 +13,10 @@ Quiz Multiplier is a role-based quiz platform where creators can build quizzes b
 	•	Auth & RBAC: Supabase Auth
 	•	Live Features: Supabase Realtime
 
+
+🛠️ Setup
+	1.	Create a free project at https://supabase.com/dashboard
+	2.	npm install
+	3.	npm run db:setup – logs in to Supabase, lets you pick your project, and creates all tables, functions and realtime settings from supabase/migrations
+	4.	cp .env.example .env and fill in SUPABASE_URL and SUPABASE_KEY (anon key) from Project Settings → API
+	5.	npm run dev

@@ -7,7 +7,8 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "db:setup": "supabase login && supabase link && supabase db push"
   },
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.12.2",
@@ -20,6 +21,7 @@
     "vue-router": "latest"
   },
   "devDependencies": {
-    "@nuxtjs/supabase": "^1.4.5"
+    "@nuxtjs/supabase": "^1.4.5",
+    "supabase": "^2.120.0"
   }
 }

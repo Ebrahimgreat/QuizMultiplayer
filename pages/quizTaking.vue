@@ -106,10 +106,10 @@ console.log("Score")
     else if(receiveChallenge.value){
       console.log('Recieving challenge');
       const{data:challengeScore,error:challengeDataError}=await supabase.from('challenge').update({
-        recieverScore:score.value,
-      }).eq('id',challenge).select('challengerScore')
+        reciever_score:score.value,
+      }).eq('id',challenge).select('challenger_score').single()
       let winner=ref('')
-      if(score.value>challengeScore)
+      if(score.value>challengeScore?.challenger_score)
       {
         winner.value='reciever'
       }

@@ -199,7 +199,7 @@ async function subscribeToLobby() {
 
       const {data: quizScoreUpdate, error: quizScoreError} = await supabase.from('challenge').update({
           challenger_score: results.value[0]?.correct,
-          challenge_recieverScore: results.value[1]?.correct,
+          reciever_score: results.value[1]?.correct,
           winner: winnerId.value
 
         }).eq('id', challengeId.value.id);
