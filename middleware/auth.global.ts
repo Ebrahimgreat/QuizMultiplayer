@@ -1,48 +1,41 @@
-
-
-import{defineStore} from "pinia";
 import{useRoleStore} from "~/stores/role";
 
-export default defineNuxtRouteMiddleware(async (to,from)=>{
+const PUBLIC_PAGES=['/login','/register'];
 
-
-    let roleStore=useRoleStore();
-
-    let profileData=ref([])
-
-
-
+export default defineNuxtRouteMiddleware(async (to)=>{
+    const roleStore=useRoleStore();
     const user=useSupabaseUser();
 
-    if(user.value)
-
-
-   {
-       console.log(user.value)
-       try{
-           const supabase=useSupabaseClient();
-           const{data:profile,error:profileError}=await supabase.from('profiles').select('*').eq('user_id',user.value.id).single();
-
-            if(profileError)
-            {
-                console.log(profile.id);
-            }
-
-
-            await roleStore.setRole(profile?.role);
-            await roleStore.setId(profile.id);
-            await roleStore.setName(profile.name)
-
-       }
-       catch(error)
-       {
-           console.log("Error");
-       }
-   }
-    if(!user.value && to.path!='/login' && to.path!='/register')
+    if(!user.value)
     {
-        console.log("path")
-        return navigateTo('/login')
+        roleStore.clear();
+        if(!PUBLIC_PAGES.includes(to.path))
+        {
+            return navigateTo('/login');
+        }
+        return;
     }
 
+    // signed-in users don't need the login/register pages
+    if(PUBLIC_PAGES.includes(to.path))
+    {
+        return navigateTo('/home');
+    }
+
+    // load the profile once per signed-in user
+    if(roleStore.userId!==user.value.id || !roleStore.id)
+    {
+        const supabase=useSupabaseClient();
+        const{data:profile,error}=await supabase.from('profiles').select('*').eq('user_id',user.value.id).maybeSingle();
+        if(error)
+        {
+            console.log(error);
+        }
+        roleStore.setProfile(profile,user.value.id);
+    }
+
+    if(to.path==='/')
+    {
+        return navigateTo('/home');
+    }
 });

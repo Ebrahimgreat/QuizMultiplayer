@@ -1,268 +1,263 @@
 <script setup lang="ts">
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getData } from "@redocly/ajv/lib/compile/validate";
-import { useRoleStore } from "#imports";
-const useRole = useRoleStore();
-import { useSupabaseUser } from "#imports";
+import{useRoleStore} from "~/stores/role";
+import{categoryName} from "~/composables/useQuiz";
 
+const roleStore=useRoleStore();
+const role=computed(()=>roleStore.role);
+const name=computed(()=>roleStore.name);
+const profile=computed(()=>roleStore.id);
 
-let playerChallenge=ref([])
+const loading=ref(true);
+const stats=ref({points:0,games_played:0});
+const rank=ref<number|null>(null);
+const challenges=ref([]);
+const quizInformation=ref([]);
+const challengesOnMyQuizzes=ref(0);
 
-let role = useRole.role;
-let name = useRole.name;
-let user = ref();
-let profile = useRole.id;
-let quizNames = ref([]);
+async function getPlayerData()
+{
+  const supabase=useSupabaseClient();
 
-let challenges = ref([]);
+  const{data:statsValues}=await supabase.from('stats').select('*').eq('user_profile_id',profile.value).maybeSingle();
+  if(statsValues)
+  {
+    stats.value=statsValues;
+    const{count}=await supabase.from('stats').select('id',{count:'exact',head:true}).gt('points',statsValues.points);
+    rank.value=(count??0)+1;
+  }
 
-let challengePlayers =ref([]);
+  const{data:challengeValues,error}=await supabase
+      .from('challenge')
+      .select('*, quiz(name), challenger:profiles!challenge_challenger_id_fkey(name), reciever:profiles!challenge_reciever_id_fkey(name)')
+      .or(`challenger_id.eq.${profile.value},reciever_id.eq.${profile.value}`)
+      .order('created_at',{ascending:false});
+  if(error)
+  {
+    console.log(error);
+  }
 
-let names = ref([]);
-async function getChallenges() {
-  let supabase = useSupabaseClient();
-
-  try {
-    const { data: challengeValues, error: challengeErrors } = await supabase
-        .from("challenge")
-        .select("*")
-        .or(`challenger_id.eq.${profile},reciever_id.eq.${profile}`);
-
-    if (challengeErrors) {
-      console.log(challengeErrors);
+  challenges.value=(challengeValues??[]).map((c)=>{
+    const iAmChallenger=c.challenger_id==profile.value;
+    const myScore=iAmChallenger?c.challenger_score:c.reciever_score;
+    const theirScore=iAmChallenger?c.reciever_score:c.challenger_score;
+    let result;
+    if(c.status==='completed')
+    {
+      result=c.winner==null?'Draw':c.winner==profile.value?'Won':'Lost';
     }
-
-    challenges.value = challengeValues;
-    console.log("values",challenges.value)
-
-
-    const userIds = [
-      ...new Set([
-        ...challengeValues?.map((challenge) => challenge.challenger_id),
-        ...challengeValues?.map((challenge) => challenge.reciever_id),
-      ]),
-    ];
-    console.log("Users",userIds)
-
-
-
-    const quizIds = [
-      ...new Set(challengeValues?.map((challenge) => challenge.quiz_id)),
-    ];
-
-
-    const { data: userProfiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id,name")
-        .in("id", userIds);
-
-    console.log("Profiles", userProfiles);
-
-
-    challengePlayers.value = challengeValues?.map((challenge) => ({
-      ...challenge,
-      user_profile_name: userProfiles.find(
-          (user) => user.id === challenge.reciever_id
-      )?.name|| 'unkown',
-      challenger_name: userProfiles.find(
-          (user) => user.id === challenge.challenger_id
-      )?.name || 'unkown'
-    }))??[];
-    console.log("players",challengePlayers.value)
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-let stats = ref([]);
-async function getStats() {
-  let currentProfile = useRoleStore().id;
-  console.log("curr", currentProfile);
-  let supabase = useSupabaseClient();
-  try {
-    const { data: statsValues, error: errorValues } = await supabase
-        .from("stats")
-        .select("*")
-        .eq("user_profile_id", currentProfile)
-        .single();
-
-    if (errorValues) {
-      console.log(errorValues);
+    else if(c.status==='live')
+    {
+      result='Unfinished';
     }
-    stats.value = statsValues;
-
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-async function deactivateQuiz(id) {
-  console.log(id);
-
-  let supabase = useSupabaseClient();
-  try {
-    const { data: deactivatedQuiz } = await supabase
-        .from("quiz")
-        .update({
-          status: "deactivated",
-        })
-        .eq("id", id);
-  } catch (error) {
-    console.log(error);
-  }
-}
-let userInformation = ref([]);
-async function getUser() {
-  let userGet = useSupabaseUser();
-
-  user.value = userGet.value?.id;
-
-  try {
-    let supabase = useSupabaseClient();
-    const { data: userData, error: errorUser } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.value)
-        .single();
-    if (errorUser) {
-      return;
+    else if(myScore==null)
+    {
+      result='Your turn';
     }
-    userInformation.value = userData;
-    console.log("Profile", profile.value);
+    else
+    {
+      result='Waiting';
+    }
+    return{
+      id:c.id,
+      quizId:c.quiz_id,
+      quizName:c.quiz?.name??'Live game',
+      opponent:(iAmChallenger?c.reciever?.name:c.challenger?.name)??'Unknown',
+      myScore,
+      theirScore,
+      result
+    };
+  });
+}
 
-    console.log(user.value?.id);
-  } catch (error) {
-    console.log(error);
+async function getCreatorData()
+{
+  const supabase=useSupabaseClient();
+  const user=useSupabaseUser();
+  const{data:quizData}=await supabase
+      .from('quiz')
+      .select('*, quiz_question(count)')
+      .eq('users_id',user.value?.id)
+      .order('created_at',{ascending:false});
+  quizInformation.value=quizData??[];
+
+  const ids=quizInformation.value.map((q)=>q.id);
+  if(ids.length)
+  {
+    const{count}=await supabase.from('challenge').select('id',{count:'exact',head:true}).in('quiz_id',ids);
+    challengesOnMyQuizzes.value=count??0;
   }
 }
 
-let quizInformation = ref([]);
-async function getQuiz() {
-  let supabase = useSupabaseClient();
-  let user = useSupabaseUser();
-  let currentUser = user.value?.id;
-  try {
-    const { data: quizData } = await supabase
-        .from("quiz")
-        .select("*")
-        .eq("users_id", currentUser);
-
-    quizInformation.value = quizData;
-  } catch (error) {
+async function toggleQuiz(item)
+{
+  const supabase=useSupabaseClient();
+  const status=item.status==='deactivated'?'active':'deactivated';
+  const{error}=await supabase.from('quiz').update({status}).eq('id',item.id);
+  if(error)
+  {
     console.log(error);
+    return;
   }
+  item.status=status;
 }
 
-onMounted(() => {
-  if (role == "content Creater") {
-    getQuiz();
+const resultStyle={
+  'Won':'bg-emerald-100 text-emerald-800',
+  'Lost':'bg-red-100 text-red-700',
+  'Draw':'bg-cocoa-100 text-cocoa-700',
+  'Waiting':'bg-sky-100 text-sky-800',
+  'Your turn':'bg-amber-100 text-amber-800',
+  'Unfinished':'bg-cocoa-100 text-cocoa-500'
+};
+
+const activeCount=computed(()=>quizInformation.value.filter((q)=>q.status!=='deactivated').length);
+
+onMounted(async ()=>{
+  try{
+    if(role.value==='player')
+    {
+      await getPlayerData();
+    }
+    else if(role.value==='content Creater')
+    {
+      await getCreatorData();
+    }
   }
-
-  getStats();
-  getChallenges();
-  getUser();
-
+  catch(error)
+  {
+    console.log(error);
+  }
+  loading.value=false;
 });
 </script>
 
 <template>
+  <div class="page">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+      <div>
+        <p class="text-cocoa-500 font-bold">Welcome back</p>
+        <h1 class="page-title">{{name||'Friend'}}</h1>
+      </div>
+      <NuxtLink v-if="role==='player'" to="/quiz" class="btn-primary">Play a quiz</NuxtLink>
+      <NuxtLink v-else-if="role==='content Creater'" to="/quiz" class="btn-primary">Create a quiz</NuxtLink>
+    </div>
 
+    <RolePicker v-if="!role" />
 
-
-  <div class="bg-gray-900 h-screen w-full p-6 text-white">
-    <h1 class="text-4xl mb-6">Profile</h1>
-
-
-
-    <div v-if="role == 'player'">
-
-      {{challengePlayers}}
-
-      <h1 class="text-3xl text-center mb-4">Player: {{ name }}</h1>
-
-      <div class="bg-white text-gray-900 p-6 rounded-lg shadow-lg mb-6">
-        <div class="grid grid-cols-3 gap-4 mb-4">
-          <div class="bg-gray-800 text-white p-4 rounded-lg">
-            Points: {{ stats.points }}
-          </div>
-          <div class="bg-gray-800 text-white p-4 rounded-lg">Ranking: 450</div>
-          <div class="bg-gray-800 text-white p-4 rounded-lg">
-            Games Played: {{ stats.games_played }}
-          </div>
+    <!-- Player -->
+    <template v-if="role==='player'">
+      <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-10">
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Points</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{stats.points}}</p>
+        </div>
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Rank</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{rank?`#${rank}`:'–'}}</p>
+        </div>
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Games</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{stats.games_played}}</p>
         </div>
       </div>
 
+      <h2 class="text-2xl font-bold mb-4">Challenges</h2>
+      <div v-if="loading" class="card p-6 text-cocoa-500">Loading…</div>
+      <div v-else-if="challenges.length===0" class="card p-8 text-center">
+        <p class="font-bold">No challenges yet</p>
+        <p class="text-cocoa-500 mt-1">Pick a quiz and challenge another player to see it here.</p>
+      </div>
+      <div v-else class="table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>Quiz</th>
+            <th>Opponent</th>
+            <th>You</th>
+            <th>Them</th>
+            <th>Result</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="item in challenges" :key="item.id">
+            <td class="font-bold">{{item.quizName}}</td>
+            <td>{{item.opponent}}</td>
+            <td>{{item.myScore??'–'}}</td>
+            <td>{{item.theirScore??'–'}}</td>
+            <td>
+              <NuxtLink
+                  v-if="item.result==='Your turn' && item.quizId"
+                  :to="{path:'/quizScreen',query:{id:item.quizId,challenge:item.id}}"
+                  class="btn-primary !py-1.5 !px-3 text-sm"
+              >
+                Play now
+              </NuxtLink>
+              <span v-else class="pill" :class="resultStyle[item.result]">{{item.result}}</span>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
 
-
-      <h2 class="text-2xl text-center mb-4">Challenge History</h2>
-      <table class="w-full bg-white text-gray-900 rounded-lg shadow-lg mb-6">
-        <thead>
-        <tr class="bg-gray-800 text-white">
-          <th class="p-4">Quiz Name</th>
-          <th class="p-4">user_profile_name?</th>
-          <th class="p-4">Challenger_name</th>
-          <th class="p-4">User Score</th>
-          <th class="p-4">Opponents Score</th>
-          <th class="p-4">Winner</th>
-          <th class="p-4">Status</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="item in challengePlayers" :key="item.id" class="border-b">
-          <td class="p-4">{{ item.quiz_name }}</td>
-          <td class="p-4">{{ item.user_profile_name }}</td>
-          <td class="p-4">{{ item.challenger_name }}</td>
-          <td class="p-4">{{ item.challenger_score }}</td>
-          <td class="p-4">{{ item.reciever_score }}</td>
-          <td class="p-4">{{ item.status }}</td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="role == 'content Creater'">
-      <h1 class="text-3xl text-center mb-4">Hello {{ name }}</h1>
-
-      <div class="bg-white text-gray-900 p-6 rounded-lg shadow-lg mb-6">
-        <div class="grid grid-cols-3 gap-4 mb-4">
-          <div class="bg-gray-800 text-white p-4 rounded-lg">Quiz Created</div>
-          <div class="bg-gray-800 text-white p-4 rounded-lg">
-            Attempted By People
-          </div>
-          <div class="bg-gray-800 text-white p-4 rounded-lg"></div>
+    <!-- Content creator -->
+    <template v-if="role==='content Creater'">
+      <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-10">
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Quizzes</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{quizInformation.length}}</p>
+        </div>
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Active</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{activeCount}}</p>
+        </div>
+        <div class="card p-4 sm:p-5">
+          <p class="text-xs sm:text-sm font-bold text-cocoa-500 uppercase tracking-wide">Challenges</p>
+          <p class="font-display text-3xl sm:text-4xl font-bold mt-1">{{challengesOnMyQuizzes}}</p>
         </div>
       </div>
 
-      <table class="w-full bg-white text-gray-900 rounded-lg shadow-lg mb-6">
-        <thead>
-        <tr class="bg-gray-800 text-white">
-          <th class="p-4">Quiz</th>
-          <th class="p-4">Status</th>
-          <th class="p-4"></th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="item in quizInformation" :key="item.id" class="border-b">
-          <td class="p-4">{{ item.name }}</td>
-          <td class="p-4">{{ item.status }}</td>
-          <td class="p-4">
-            <button
-                @click="deactivateQuiz(item.id)"
-                class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition duration-300"
-            >
-              Deactivate
-            </button>
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </div>
+      <h2 class="text-2xl font-bold mb-4">Your quizzes</h2>
+      <div v-if="loading" class="card p-6 text-cocoa-500">Loading…</div>
+      <div v-else-if="quizInformation.length===0" class="card p-8 text-center">
+        <p class="font-bold">You haven't made a quiz yet</p>
+        <p class="text-cocoa-500 mt-1 mb-4">Players can only play quizzes that creators like you write.</p>
+        <NuxtLink to="/quiz" class="btn-primary">Create your first quiz</NuxtLink>
+      </div>
+      <div v-else class="table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>Quiz</th>
+            <th>Category</th>
+            <th>Questions</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="item in quizInformation" :key="item.id">
+            <td class="font-bold">{{item.name}}</td>
+            <td>{{categoryName(item.quiz_category)}}</td>
+            <td>{{item.quiz_question?.[0]?.count??0}}</td>
+            <td>
+              <span class="pill" :class="item.status==='deactivated'?'bg-cocoa-100 text-cocoa-500':'bg-emerald-100 text-emerald-800'">
+                {{item.status==='deactivated'?'Hidden':'Live'}}
+              </span>
+            </td>
+            <td class="text-right">
+              <button
+                  :class="item.status==='deactivated'?'btn-secondary':'btn-danger'"
+                  class="!py-1.5 !px-3 text-sm"
+                  @click="toggleQuiz(item)"
+              >
+                {{item.status==='deactivated'?'Make live':'Hide'}}
+              </button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
   </div>
 </template>
-
-<style scoped>
-/* Add any additional styles here */
-button:hover {
-  background-color: #e53e3e; /* Darker red for hover effect */
-}
-</style>

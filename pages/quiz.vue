@@ -1,298 +1,182 @@
 <script setup lang="ts">
-import '#components'
-
 import{useRoleStore} from "~/stores/role";
-import {ca} from "cronstrue/dist/i18n/locales/ca";
-import {useSupabaseUser} from "#imports";
-import{usequizStore} from "#imports";
-const quizStore=usequizStore();
+import{QUIZ_CATEGORIES,categoryName} from "~/composables/useQuiz";
 
+const roleStore=useRoleStore();
+const role=computed(()=>roleStore.role);
 
-let roleStore=useRoleStore();
-let role=roleStore.role;
-let profileId=roleStore.id
+const quizzes=ref([]);
+const loading=ref(true);
+const selected=ref<number|null>(null); // category index, null = all
+const quizChosen=ref(null);
+const mode=ref<'pick'|'challenge'>('pick');
+const players=ref([]);
+const errorMessage=ref('');
+const busy=ref(false);
 
+const filteredQuizzes=computed(()=>
+    selected.value==null
+        ?quizzes.value
+        :quizzes.value.filter((q)=>q.quiz_category===selected.value+1)
+);
 
-let categories=ref(['math','sports','Science','Journalling','Travelling']);
-
-let showItem=ref();
-
- function takeQuiz(id)
+async function loadQuizzes()
 {
-  navigateTo({
-    path:'/quizTaking',
-    query:{
-      id:id,
-      challenge:''
-
-    }
-
-
-  })
-
-}
-
-
-
-
-async function quizMainScreen(id:int) {
-
-  challengeId.value = id;
-  let response = false
-  if (challengeId.value != '') {
-    response = confirm('Are you sure You want to challenge this player?')
-
-    if (response) {
-      try {
-        let supabase = useSupabaseClient();
-
-        const {data: challenge, error: challengeError} = await supabase.from('challenge').insert({
-          'quiz_id': quizChosen.value.id,
-          'reciever_id': challengeId.value,
-          'challenger_id': profileId
-        }).select('id').single();
-        quizStore.setChallenge(challenge.id);
-        if (challengeError) {
-          console.log(challengeError)
-          return;
-        }
-
-      } catch (error) {
-
-      }
-      navigateTo({
-        path: '/quizScreen',
-        query: {
-          id: quizChosen.value.id,
-          challengeId: id,
-          startChallenge: true,
-        }
-      })
-    }
-
-  }
-  else{
-    navigateTo({
-      path:'/quizScreen',
-      query:{
-        id:quizChosen.value.id,
-        startChallenge:false
-      }
-    })
-  }
-}
-let quizez=ref([])
-let filteredArray=ref([])
-let category=ref()
-let options=ref([])
-async function quizData(){
-  let supabase=useSupabaseClient();
-
-  try {
-    const {data: quizInformation, error: errorInformation} = await supabase.from('quiz').select('*');
-    quizez.value = quizInformation
-    options.value=quizez.value.map((item)=>item.id);
-    console.log(options.value)
-
-
-    if (errorInformation) {
-      console.log("Error");
-      return;
-    }
-  }
-
-
-
-  catch(error){
-    console.log(error);
-  }
-}
-async function categorySelected(value)
-{
-  selected.value=value
-  value=value+1;
- filteredArray.value=quizez.value.filter(
-     (quiz)=>quiz.quiz_category===value
- )
-
-
-}
-let quizChosen=ref(false)
-let showOptions=ref(false);
-
- let challengeId=ref('')
- function toggleOption(item)
-{
-  quizChosen.value=item
-  quizSelected.value=false
-  console.log(quizChosen.value.id)
-
-  showOptions.value=!showOptions.value;
-}
-
-
-let quizSelected=ref(true)
-function online()
-{
-  navigateTo({
-    path:'/lobby',
-    query:{
-      id:quizChosen.value.id
-    }
-  })
-
-}
-
-let selected=ref()
-
-let challengeOption=ref(false)
-
-let players=ref([])
-async function  toggleChallenge()
-{
-  let supabase=useSupabaseClient();
-  let user=useSupabaseUser()
-  let profile=user.value?.id;
-  console.log(profile)
-  try{
-    const{data}=await supabase.from('profiles').select('*').eq('role','player')
-        .neq('user_id',profile);
-  players.value=data;
-  }
-
-  catch (error)
+  const supabase=useSupabaseClient();
+  const{data,error}=await supabase
+      .from('quiz')
+      .select('id, name, quiz_category, quiz_question(count)')
+      .neq('status','deactivated')
+      .order('created_at',{ascending:false});
+  if(error)
   {
     console.log(error);
   }
+  // a quiz without questions can't be played
+  quizzes.value=(data??[]).filter((q)=>(q.quiz_question?.[0]?.count??0)>0);
+  loading.value=false;
+}
 
+function chooseQuiz(item)
+{
+  quizChosen.value=item;
+  mode.value='pick';
+  errorMessage.value='';
+}
 
-  challengeOption.value=!challengeOption.value;
+async function showPlayers()
+{
+  mode.value='challenge';
+  const supabase=useSupabaseClient();
+  const{data,error}=await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('role','player')
+      .neq('id',roleStore.id)
+      .order('name');
+  if(error)
+  {
+    console.log(error);
+  }
+  players.value=data??[];
+}
 
+async function challengePlayer(player)
+{
+  busy.value=true;
+  errorMessage.value='';
+  const supabase=useSupabaseClient();
+  const{data:challenge,error}=await supabase.from('challenge').insert({
+    quiz_id:quizChosen.value.id,
+    reciever_id:player.id,
+    challenger_id:roleStore.id
+  }).select('id').single();
+  busy.value=false;
+  if(error)
+  {
+    errorMessage.value='Could not create the challenge. Please try again.';
+    console.log(error);
+    return;
+  }
+  navigateTo({path:'/quizScreen',query:{id:quizChosen.value.id,challenge:challenge.id}});
 }
 
 onMounted(()=>{
-  if(role=='player'){
-    quizData();
+  if(role.value==='player')
+  {
+    loadQuizzes();
   }
-
-})
+});
 </script>
 
-
 <template>
+  <div v-if="!role" class="page max-w-3xl">
+    <RolePicker />
+  </div>
 
+  <CreatingQuiz v-else-if="role==='content Creater'" />
 
+  <div v-else class="page">
+    <h1 class="page-title">Pick a quiz</h1>
+    <p class="text-cocoa-500 mt-1 mb-6">Play on your own, challenge a friend, or jump into a live match.</p>
 
+    <div class="flex flex-wrap gap-2 mb-6">
+      <button
+          class="px-4 py-2 rounded-full font-bold border-2 transition"
+          :class="selected==null?'bg-cocoa-900 border-cocoa-900 text-white':'bg-white border-cocoa-100 text-cocoa-700 hover:border-cocoa-200'"
+          @click="selected=null"
+      >
+        All
+      </button>
+      <button
+          v-for="(item,index) in QUIZ_CATEGORIES"
+          :key="item"
+          class="px-4 py-2 rounded-full font-bold border-2 transition"
+          :class="selected===index?'bg-cocoa-900 border-cocoa-900 text-white':'bg-white border-cocoa-100 text-cocoa-700 hover:border-cocoa-200'"
+          @click="selected=index"
+      >
+        {{item}}
+      </button>
+    </div>
 
-  <div class="bg-gray-900 h-screen w-full p-6 text-white">
-    <div v-if="role == 'player'">
-      <div class="h-full flex flex-col bg-gray-900">
-        <h1 class="text-center text-3xl mb-4">Choose a Category</h1>
+    <div v-if="loading" class="card p-6 text-cocoa-500">Loading quizzes…</div>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <button
-              v-for="(item, index) in categories"
-              :key="index"
-              :value="index"
-              class="border p-4 text-center rounded-lg transition duration-300"
-              :class="
-              selected == index ? 'bg-blue-500' : 'bg-white text-gray-900'
-            "
-              @click="categorySelected(index, item)"
-          >
-            {{ item }}
-          </button>
+    <div v-else-if="filteredQuizzes.length===0" class="card p-8 text-center">
+      <p class="font-bold">No quizzes here yet</p>
+      <p class="text-cocoa-500 mt-1">Try another category, or check back once a creator has published one.</p>
+    </div>
+
+    <div v-else class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <button
+          v-for="item in filteredQuizzes"
+          :key="item.id"
+          class="card p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md border-2"
+          :class="quizChosen?.id===item.id?'!border-amber-400 ring-4 ring-amber-100':''"
+          @click="chooseQuiz(item)"
+      >
+        <span class="pill bg-amber-100 text-amber-800">{{categoryName(item.quiz_category)}}</span>
+        <p class="font-display text-xl font-bold mt-3">{{item.name}}</p>
+        <p class="text-sm text-cocoa-500 mt-1">{{item.quiz_question?.[0]?.count}} questions</p>
+      </button>
+    </div>
+
+    <!-- Mode picker -->
+    <div v-if="quizChosen" class="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-cocoa-100 shadow-[0_-8px_30px_rgba(59,36,20,0.08)]">
+      <div class="mx-auto max-w-5xl px-4 sm:px-6 py-5">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <p class="text-sm font-bold text-cocoa-500">Selected quiz</p>
+            <p class="font-display text-2xl font-bold">{{quizChosen.name}}</p>
+          </div>
+          <button class="btn-secondary !px-3 !py-1.5 text-sm" @click="quizChosen=null">Close</button>
         </div>
 
-        <div
-            v-if="filteredArray.length === 0"
-            class="text-center text-white mb-4"
-        >
-          There are no results
+        <div v-if="mode==='pick'" class="grid sm:grid-cols-3 gap-3">
+          <NuxtLink :to="{path:'/quizScreen',query:{id:quizChosen.id}}" class="btn-primary !py-4">
+            Play solo
+          </NuxtLink>
+          <button class="btn-secondary !py-4" @click="showPlayers">Challenge a player</button>
+          <NuxtLink :to="{path:'/lobby',query:{id:quizChosen.id}}" class="btn-secondary !py-4">
+            Play live
+          </NuxtLink>
         </div>
 
         <div v-else>
-          <h2 class="text-center text-2xl mb-4">
-            Showing Quiz of Category Selected
-          </h2>
-          <div class="grid grid-cols-1 gap-4 mb-6">
-            <button
-                v-for="(item, index) in filteredArray"
-                :key="index"
-                @click="toggleOption(item)"
-                class="block text-white text-sm font-bold mb-2 shadow appearance-none border border-red-500 rounded w-full py-2 px-3 leading-tight focus:outline-none transition duration-300 hover:bg-red-600"
-            >
-              {{ item.name }}
-            </button>
+          <div class="flex items-center justify-between mb-2">
+            <p class="font-bold">Who do you want to challenge?</p>
+            <button class="text-sm font-bold text-amber-700 hover:underline" @click="mode='pick'">Back</button>
           </div>
-
-          <div v-if="quizChosen" class="text-center text-white mb-4">
-            Quiz Selected: {{ quizChosen.name }}
-          </div>
-
-          <div v-if="showOptions" class="grid grid-cols-2 gap-4 mb-6">
-            <button
-                @click="quizMainScreen('')"
-                class="block text-white text-sm font-bold shadow appearance-none border p-4 rounded w-full transition duration-300 hover:bg-gray-700"
-            >
-              Solo
-            </button>
-
-            <button
-                @click="toggleChallenge"
-                class="block text-white text-sm font-bold shadow appearance-none border border-red-500 rounded w-full transition duration-300 hover:bg-red-600"
-            >
-              Challenge
-            </button>
-
-            <button
-                @click="online"
-                class="block text-white text-sm font-bold shadow appearance-none border border-red-500 rounded w-full transition duration-300 hover:bg-red-600"
-            >
-              play online
-            </button>
-          </div>
-
-          <div v-if="challengeOption" class="flex flex-col items-center mb-6">
-            <h3 class="text-white mb-2">Choose a Player</h3>
-            <div
-                class="overflow-y-auto max-h-64 border border-gray-300 rounded-md w-full"
-            >
-              <table class="w-full bg-white text-gray-900 rounded-lg shadow-lg">
-                <thead>
-                <tr class="bg-gray-800 text-white">
-                  <th class="p-4">Name</th>
-                  <th class="p-4">Challenge</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="item in players" :key="item.id" class="border-b">
-                  <td class="p-4 text-white">{{ item.name }}</td>
-                  <td class="p-4">
-                    <button
-                        @click="quizMainScreen(item.id)"
-                        class="bg-green-500 text-white p-2 rounded hover:bg-green-600 transition duration-300"
-                    >
-                      Challenge
-                    </button>
-                  </td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <p v-if="errorMessage" class="text-sm text-red-700 mb-2">{{errorMessage}}</p>
+          <div v-if="players.length===0" class="text-cocoa-500 py-4">No other players yet.</div>
+          <ul v-else class="max-h-56 overflow-y-auto divide-y divide-cocoa-100 rounded-xl border border-cocoa-100">
+            <li v-for="player in players" :key="player.id" class="flex items-center justify-between px-4 py-2.5">
+              <span class="font-bold">{{player.name||'Unnamed player'}}</span>
+              <button class="btn-primary !py-1.5 !px-3 text-sm" :disabled="busy" @click="challengePlayer(player)">Challenge</button>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
-
-    <div v-if="role == 'content Creater'">
-      <creating-quiz></creating-quiz>
-    </div>
+    <div v-if="quizChosen" class="h-48" />
   </div>
 </template>
-
-
-
-<style scoped>
-
-</style>

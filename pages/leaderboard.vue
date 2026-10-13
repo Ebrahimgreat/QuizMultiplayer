@@ -1,130 +1,89 @@
 <script setup lang="ts">
 import { useRoleStore } from "~/stores/role";
-import { useSupabaseUser } from "#imports";
+
 const roleStore = useRoleStore();
-let role = roleStore.role;
+const loading = ref(true);
+const userStats = ref([]);
 
-async function challengePlayer(item) {
-  alert(`Invitation to ${item.name} Has been sent`);
-}
-async function getUser() {
-  let supabase = useSupabaseClient();
-  console.log(supabase.auth.getUser());
-}
-let quizInformation = ref([]);
-async function getAllQuiz() {
-  let supabase = useSupabaseClient();
-  const currentUser = useSupabaseUser();
-  try {
-    const { data: quizData, error: quizError } = await supabase
-        .from("quiz")
-        .select("*")
-        .eq("users_id", currentUser.value);
-    if (quizError) {
-      console.log("Unable to fetch");
-      return;
-    }
-    quizInformation.value = quizData;
-  } catch (error) {
-    console.log(error);
-  }
-}
-
-
-
-let teachers = ref();
-
-let profiles = ref([]);
-
-let stats=ref([])
-
-let userStats=ref([])
-async function  getstats()
-{
-  let supabase=useSupabaseClient();
-  try {
-    const {data: statsData, error: errorData} = await supabase.from('stats').select('*').order('points',{ascending:false})
-    stats.value = statsData;
-
-    const profileIds = statsData.map((item) => item.user_profile_id)
-
-
-    const {data: profileData, error: profileError} = await supabase
-        .from("profiles")
-        .select("*").in('id', profileIds)
-    console.log(profileData)
-
-    if (profileError) {
-      console.log("Error");
-      return;
-    }
-    userStats.value=statsData?.map((stat)=>({
-      ...stat,
-      profile:profileData.find((profile)=>profile.id===stat.user_profile_id)
-    }))
-  }
-
-  catch(error){
-    console.log(error)
-  }
-
-}
-
-async function getCurrentUser() {
+async function getStats() {
   const supabase = useSupabaseClient();
 
-  const { data, error } = await supabase.auth.getUser();
-
+  const { data: statsData, error } = await supabase
+      .from("stats")
+      .select("points, games_played, profiles!inner(id, name, role)")
+      .eq("profiles.role", "player")
+      .order("points", { ascending: false });
   if (error) {
-    console.error("Error fetching current user:", error);
-  } else {
-    console.log("Current user ID:", data.user?.id);
-    console.log("Current user email:", data.user?.email);
+    console.log(error);
   }
+
+  const { data: wins } = await supabase.from("challenge").select("winner").not("winner", "is", null);
+  const winCount = {};
+  (wins ?? []).forEach((w) => {
+    winCount[w.winner] = (winCount[w.winner] ?? 0) + 1;
+  });
+
+  // players on the same points share a rank
+  let rank = 0;
+  userStats.value = (statsData ?? []).map((item, index, all) => {
+    if (index === 0 || item.points !== all[index - 1].points) rank = index + 1;
+    return {
+      id: item.profiles.id,
+      name: item.profiles.name || "Unnamed player",
+      points: item.points,
+      games: item.games_played,
+      wins: winCount[item.profiles.id] ?? 0,
+      rank
+    };
+  });
+  loading.value = false;
 }
 
-onMounted(() => {
+const medal = { 1: "bg-amber-400 text-cocoa-900", 2: "bg-slate-300 text-slate-800", 3: "bg-orange-300 text-orange-900" };
 
-  getstats()
+onMounted(() => {
+  getStats();
 });
 </script>
 
 <template>
-  <div class="bg-gray-900 h-screen w-full p-6 text-white">
+  <div class="page max-w-3xl">
+    <h1 class="page-title">Leaderboard</h1>
+    <p class="text-cocoa-500 mt-1 mb-6">Every right answer earns 10 points.</p>
 
-
-    <div>
-      <h2 class="text-2xl text-center mb-4">
-       Leaderboard
-      </h2>
-
-      <table class="w-full bg-white text-gray-900 rounded-lg shadow-lg mb-6">
+    <div v-if="loading" class="card p-6 text-cocoa-500">Loading…</div>
+    <div v-else-if="userStats.length === 0" class="card p-8 text-center">
+      <p class="font-bold">No players yet</p>
+      <p class="text-cocoa-500 mt-1">Play a quiz to get on the board.</p>
+    </div>
+    <div v-else class="table-wrap">
+      <table>
         <thead>
-        <tr class="bg-gray-800 text-white">
-          <th class="p-4">Name</th>
-          <th class="p-4">Ranking</th>
-          <th class="p-4">Total Points</th>
-          <th class="p-4">Games Won</th>
-
+        <tr>
+          <th class="w-16">Rank</th>
+          <th>Player</th>
+          <th class="text-right">Points</th>
+          <th class="text-right hidden sm:table-cell">Games</th>
+          <th class="text-right">Wins</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="item in userStats" :key="item.id" class="border-b">
-          <td class="p-4">{{item.profile.name }}</td>
-          <td class="p-4"></td>
-          <td class="p-4">{{item.points}}</td>
-          <td class="p-4"></td>
-
+        <tr v-for="item in userStats" :key="item.id" :class="item.id == roleStore.id ? 'bg-amber-50' : ''">
+          <td>
+            <span class="h-8 w-8 rounded-full grid place-items-center font-display font-bold" :class="medal[item.rank] ?? 'bg-cocoa-50 text-cocoa-500'">
+              {{ item.rank }}
+            </span>
+          </td>
+          <td class="font-bold">
+            {{ item.name }}
+            <span v-if="item.id == roleStore.id" class="pill bg-amber-200 text-amber-900 ml-1">You</span>
+          </td>
+          <td class="text-right font-display text-lg font-bold">{{ item.points }}</td>
+          <td class="text-right hidden sm:table-cell">{{ item.games }}</td>
+          <td class="text-right">{{ item.wins }}</td>
         </tr>
         </tbody>
       </table>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Add any additional styles here */
-button:hover {
-  background-color: #e53e3e; /* Darker red for hover effect */
-}
-</style>

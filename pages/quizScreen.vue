@@ -1,121 +1,49 @@
 <script setup lang="ts">
-import{usequizStore} from "~/stores/quizStart";
-const quizStore=usequizStore();
-let options=ref([
-])
-let questions=ref([
-])
+import{fetchQuiz,type LoadedQuiz} from "~/composables/useQuiz";
 
-let answers=ref([])
-let quizId=ref()
-let challengerId=ref()
-let startChallenge=ref()
-let quizName=ref()
-let challengerName=ref()
+const route=useRoute();
+const supabase=useSupabaseClient();
+const quiz=ref<LoadedQuiz|null>(null);
+const errorMessage=ref('');
+const isChallenge=computed(()=>!!route.query.challenge);
 
-async function getQuizData() {
-
-
-  const url = new URLSearchParams(window.location.search);
-   quizId.value = url.get('id');
-challengerId.value=url.get('challengeId');
-   startChallenge.value=url.get('startChallenge');
-
-
-  try {
-    const supabase = useSupabaseClient();
-    const {data: quizValue, error: quizError} = await supabase.from('quiz').select('name').eq('id', quizId.value).single();
-
-    if (quizError) {
-      console.log(quizError);
-      return;
-    }
-    console.log(quizValue)
-
-
-    quizName.value=quizValue.name;
-    const {data:quizData, error:questionError} =await supabase.from('quiz_question').select('id,question').eq('quiz_id',quizId.value)
-    if(questionError)
-    {
-      console.log(questionError);
-      return;
-    }
-    console.log('questions fetched');
-
-
-
-    questions.value=quizData?.map((item)=>({
-      question:item.question
-    }));
-
-    const{data:answerData,error:answerError}= await supabase.from('quiz_answer').select('answer').in('question_id',quizData.map((item)=>item.id));
-    if(answerError){
-      console.log(answerError);
-    }
-    answers.value=answerData.map((item)=>({
-      answer:item.answer
-    }));
-
-    const{data:optionData,error:optionError}=await supabase.from('quiz_options').select('A,B,C,D').in('quiz_questions',quizData?.map((item)=>item.id))
-if(optionError)
-{
-  console.log(optionError);
-  return;
-}
-console.log('options fetched')
-options.value=optionData.map((item)=>({
-  A:item.A,
-  B:item.B,
-  C:item.C,
-  D:item.D
-}))
-    await quizStore.setData(quizName.value, questions.value, options.value,answers.value)
+onMounted(async ()=>{
+  try{
+    quiz.value=await fetchQuiz(route.query.id as string,supabase);
   }
-
   catch(error)
   {
     console.log(error);
+    errorMessage.value=`We couldn't load this quiz. ${error?.message??''}`;
   }
-}
+});
+
 function startQuiz()
 {
-  navigateTo({
-    path:'/quizTaking',
-    query:{
-      startChallenge:true,
-
-    }
-  })
+  navigateTo({path:'/quizTaking',query:route.query});
 }
-onMounted(()=>{
-  getQuizData()
-})
 </script>
+
 <template>
+  <div class="flex-1 flex items-center justify-center px-4 py-10">
+    <div class="card w-full max-w-md p-8 text-center">
+      <img src="/rabbit.png" alt="Quiz Rabbit mascot" class="h-32 w-32 mx-auto">
 
-<div
-    class="bg-gray-900 h-screen flex flex-col items-center justify-center p-6 text-white"
->
-<h1 class="text-center text-5xl mb-4">Quiz Rabbit</h1>
+      <template v-if="quiz">
+        <span class="pill mt-4" :class="isChallenge?'bg-rose-100 text-rose-700':'bg-amber-100 text-amber-800'">
+          {{isChallenge?'Challenge':'Solo'}}
+        </span>
+        <h1 class="text-3xl font-bold mt-2">{{quiz.name}}</h1>
+        <p class="text-cocoa-500 mt-1">{{quiz.questions.length}} questions · 10 points for each right answer</p>
+        <button class="btn-primary w-full mt-6 !py-3.5 text-lg" :disabled="quiz.questions.length===0" @click="startQuiz">
+          Start quiz
+        </button>
+      </template>
 
-<h3 class="text-2xl mb-2">
-  Name: <b>{{ quizName }}</b>
-</h3>
-<h4 class="text-xl mb-6">Total Questions: {{ questions.length }}</h4>
+      <p v-else-if="errorMessage" class="text-red-700 mt-4">{{errorMessage}}</p>
+      <p v-else class="text-cocoa-500 mt-4">Loading quiz…</p>
 
-<img src="/images/rabbit.png" class="w-auto h-1/2 object-contain mb-6" />
-
-<button
-    @click="startQuiz"
-    class="bg-white text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow hover:bg-gray-100 transition duration-300"
->
-  Start Quiz
-</button>
-</div>
+      <NuxtLink to="/quiz" class="inline-block mt-4 text-sm font-bold text-cocoa-500 hover:text-cocoa-900">← Back to quizzes</NuxtLink>
+    </div>
+  </div>
 </template>
-
-
-
-<style scoped>
-
-</style>
